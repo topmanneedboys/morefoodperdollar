@@ -258,6 +258,10 @@ class BackendService:
         discovery_index_sha256: str | None = None,
         discovery_release_id: str | None = None,
     ):
+        # Repeated searches for the same query and area are served from memory
+        # instead of re-ranking; the startup warm-up fills this cache.
+        self._response_cache: dict[tuple, dict[str, Any]] = {}
+        self._response_lock = threading.Lock()
         self.release_manager = release_manager or ReleaseManager(root)
         self._reader_lock = threading.Lock()
         self._readers: dict[tuple[str, str], ArgentinaBackendReader] = {}
@@ -660,6 +664,24 @@ class BackendService:
             discovery_query = _FAMILY_DISCOVERY_QUERIES[selected_family]
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
+        # Every input is parsed and the release is pinned at this point, so the
+        # cache key is complete and a hit can return before any routing or
+        # ranking work happens.
+        cache_key = (
+            handle.release_id,
+            query.casefold().strip(),
+            page,
+            selection_id,
+            str(payload.get("latitude")),
+            str(payload.get("longitude")),
+            str(payload.get("radiusKm")),
+        )
+        with self._response_lock:
+            cached_response = self._response_cache.get(cache_key)
+        if cached_response is not None:
+            reply = dict(cached_response)
+            reply["requestId"] = request_id
+            return reply
         authorization_status = {
             "service": "ready",
             "releaseId": handle.release_id,
@@ -793,6 +815,10 @@ class BackendService:
         }
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
         self._emit_request_metrics(request_id, handle, metrics, started=started)
+        with self._response_lock:
+            self._response_cache[cache_key] = dict(response)
+            if len(self._response_cache) > 512:
+                self._response_cache.pop(next(iter(self._response_cache)))
         return response
 
 

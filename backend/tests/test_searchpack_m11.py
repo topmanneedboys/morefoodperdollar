@@ -1665,3 +1665,20 @@ if __name__ == "__main__":
 
 
 
+
+
+class SearchResponseCacheTests(unittest.TestCase):
+    def test_repeated_search_is_served_from_the_response_cache(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+        payload = {"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz", "page": 0}
+
+        first = service.search(dict(payload))
+        calls_after_first = len(reader.discovery_calls)
+        second = service.search(dict(payload))
+
+        self.assertEqual(first["matches"], second["matches"])
+        self.assertEqual(len(reader.discovery_calls), calls_after_first)
+        self.assertNotEqual(first["requestId"], second["requestId"])
