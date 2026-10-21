@@ -172,8 +172,8 @@ class ArgentinaConsumerEdgeTransportTest {
     @Test
     fun onlyAllowlistedHttpsHostAndRoutesCanBeResolved() {
         val valid = ArgentinaConsumerEdgeClientConfig()
-        assertEquals(15_000, valid.readTimeoutMillis)
-        assertEquals(20_000, valid.totalTimeoutMillis)
+        assertEquals(30_000, valid.readTimeoutMillis)
+        assertEquals(45_000, valid.totalTimeoutMillis)
         assertEquals("https://valuepilot-argentina-consumer-edge-m72bv57hrq-rj.a.run.app/v1/status", valid.resolve("/v1/status").toString())
 
         val routeFailure = runCatching { valid.resolve("/v1/admin") }.exceptionOrNull()
@@ -289,3 +289,4 @@ class ArgentinaConsumerEdgeTransportTest {
         }
     }
 }
+
