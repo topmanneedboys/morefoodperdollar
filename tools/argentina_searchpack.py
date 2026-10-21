@@ -67,6 +67,13 @@ _TERM_STRUCT = struct.Struct("<IIII")
 _FALLBACK_FST_MAGIC = b"VPFST1\0"
 
 
+def _preload_region_quietly(region) -> None:
+    """Background region preload; a failure must never affect requests."""
+    try:
+        region.preload()
+    except Exception:
+        pass
+
 class SearchPackError(RuntimeError):
     """A SearchPack is missing, malformed, or failed immutable verification."""
 
@@ -681,7 +688,12 @@ class SearchPackRegion:
         return f"{name}:{offset}:{length}:{descriptor['sha256']}"
 
     def preload(self, *, stats: SearchPackStats | None = None) -> int:
-        """Decompress this region's index blocks into the shared cache."""
+        """Populate the block cache with one ranged read per file.
+
+        Reading one block per RPC is what made preloading take a minute; a
+        region has ~10 files and hundreds of blocks, so each file is fetched
+        once and its blocks are sliced locally into the cache.
+        """
         stats = stats or SearchPackStats()
         loaded = 0
         for name, blocks in (
@@ -692,8 +704,21 @@ class SearchPackRegion:
             ("rankTermDirectory", self.rank_term_blocks),
             ("rankChunkDirectory", self.rank_docstore_blocks),
         ):
+            if not blocks:
+                continue
+            descriptor = self.files[name]
+            total = int(descriptor["bytes"])
+            raw = self.artifacts.read_range(str(descriptor["path"]), 0, total)
+            if not isinstance(raw, bytes) or len(raw) != total:
+                raise SearchPackError(f"{name} preload read is truncated")
+            stats.bytes_read += len(raw)
             for block in blocks:
-                self._load_block(name, block, stats, label=name)
+                offset = int(block["offset"])
+                length = int(block["length"])
+                data = raw[offset:offset + length]
+                if len(data) != length:
+                    raise SearchPackError(f"{name} preload block is truncated")
+                self._cache.put(self._cache_key(name, offset, length), data)
                 loaded += 1
         return loaded
     def _read(self, name: str, offset: int, length: int, stats: SearchPackStats, *, label: str) -> bytes:
@@ -1314,7 +1339,7 @@ class SearchPackManager:
 
     DEFAULT_GLOBAL_CACHE_BYTES = 64 * 1024 * 1024
 
-    def __init__(self, artifacts: Any, manifest: Mapping[str, Any], *, cache_bytes: int = DEFAULT_GLOBAL_CACHE_BYTES):
+    def __init__(self, artifacts: Any, manifest: Mapping[str, Any], *, cache_bytes: int = DEFAULT_GLOBAL_CACHE_BYTES, preload: bool = True):
         self.artifacts = artifacts
         descriptor = manifest.get("searchPackArtifact") if isinstance(manifest, Mapping) else None
         if not isinstance(descriptor, Mapping):
@@ -1335,6 +1360,7 @@ class SearchPackManager:
         self.descriptor = dict(descriptor)
         self.region_ids = tuple(sorted(regions))
         self.cache_bytes = cache_bytes
+        self.preload_enabled = preload
         self._cache = _ByteLRU(cache_bytes)
         self._regions: dict[str, SearchPackRegion] = {}
         self._metadata_cache: dict[str, Mapping[str, Any]] = {}
@@ -1379,6 +1405,10 @@ class SearchPackManager:
         region = SearchPackRegion(self.artifacts, metadata, cache=self._cache)
         self._metadata_cache[region_id] = metadata
         self._regions[region_id] = region
+        # Warm this region in the background so its blocks come from memory,
+        # never from GCS on the request path.
+        if self.preload_enabled:
+            threading.Thread(target=_preload_region_quietly, args=(region,), daemon=True).start()
         return region
 
     def preload(self, region_ids: Sequence[str] | None = None, *, stats: SearchPackStats | None = None) -> int:
@@ -1429,3 +1459,4 @@ __all__ = [
     "fst_lookup",
     "record_for_doc",
 ]
+

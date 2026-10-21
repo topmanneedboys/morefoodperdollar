@@ -1591,7 +1591,7 @@ class SearchPackRemoteLatencyTests(unittest.TestCase):
         manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
         store = _LatencyStore(output, 0)
         artifacts = ManifestReleaseArtifactStore(store, manifest, release_id=derived_id)
-        manager = SearchPackManager(artifacts, manifest)
+        manager = SearchPackManager(artifacts, manifest, preload=False)
         region = manager.region("ar-caba")
         stats = SearchPackStats()
 
@@ -1662,5 +1662,6 @@ class SearchPackRemoteLatencyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
