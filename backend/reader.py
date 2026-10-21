@@ -593,7 +593,9 @@ class ArgentinaBackendReader:
         self.root = release.root
         self.artifacts = release.artifacts
         self.router = NationalStoreRouter(self.root, artifacts=self.artifacts)
-        self.cache = cache or VerifiedEvidenceCache()
+        # Product partitions are immutable per release; 128 MB evicted them
+        # mid-session so every search re-read the same products from GCS.
+        self.cache = cache or VerifiedEvidenceCache(max_bytes=1024 * 1024 * 1024)
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
         self._search_cache: OrderedDict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = OrderedDict()
@@ -1679,6 +1681,7 @@ class ArgentinaBackendReader:
 
 
 __all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CANDIDATE_CACHE_ENTRIES", "MAX_INPUT_CANDIDATE_UNION", "MAX_OFFER_PARTITION_CONCURRENCY", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+
 
 
 
