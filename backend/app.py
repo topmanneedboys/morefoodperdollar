@@ -1,4 +1,7 @@
-"""FastAPI HTTP surface for ValuePilot's read-only backend."""
+import os
+import threading
+import time
+import uuid
 
 import os
 import uuid
@@ -105,6 +108,30 @@ def create_app(service: BackendService | None = None):
 
     app = FastAPI(title="ValuePilot Argentina Backend", version="valuepilot-argentina-backend-v1", docs_url=None, redoc_url=None, openapi_url=None)
     runtime_service = service or _runtime_service()
+
+    # The first computation for a query is CPU-heavy (7-14s); repeats are ~2s.
+    # Warm the most common grocery queries once per instance so a shopper's
+    # first search is already a repeat.
+    _WARM_QUERIES = ("leche", "arroz", "pan", "aceite", "yerba", "queso",
+                     "pollo", "azucar", "cafe", "fideos", "gaseosa", "vino")
+
+    def _warm_query_cache() -> None:
+        for query in _WARM_QUERIES:
+            try:
+                runtime_service.search({
+                    "latitude": "-34.6037",
+                    "longitude": "-58.3814",
+                    "radiusKm": "5",
+                    "query": query,
+                    "page": 0,
+                })
+            except Exception:  # noqa: BLE001 - warming must never break startup
+                continue
+            time.sleep(0.2)
+
+    @app.on_event("startup")
+    def _start_warmup() -> None:
+        threading.Thread(target=_warm_query_cache, daemon=True).start()
 
     @app.middleware("http")
     async def bounded_body(request: Request, call_next):
