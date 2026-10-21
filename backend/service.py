@@ -21,6 +21,56 @@ from .reader import (
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
 from .english_queries import ENGLISH_QUERY_PHRASES, ENGLISH_QUERY_WORDS
 
+# Common English grocery words that the family labels do not spell the way
+# shoppers type them (plural, colloquial, or a different register).
+_ENGLISH_SHOPPER_SYNONYMS = {
+    "soda": "gaseosa", "candy": "caramelos", "candies": "caramelos",
+    "cookies": "galletitas", "cookie": "galletitas", "crackers": "galletitas",
+    "chips": "papas", "crisps": "papas", "diapers": "panales", "nappy": "panal",
+    "toothpaste": "pasta dental", "toilet paper": "papel higienico",
+    "paper towels": "papel de cocina", "napkins": "servilletas",
+    "dish soap": "detergente", "laundry detergent": "detergente",
+    "bleach": "lavandina", "softener": "suavizante", "shampoo": "shampoo",
+    "conditioner": "acondicionador", "deodorant": "desodorante",
+    "razor": "afeitar", "diaper": "panal", "wipes": "toallitas",
+    "ice cream": "helado", "yogurt": "yogur", "yoghurt": "yogur",
+    "butter": "manteca", "cheese": "queso", "ham": "jamon",
+    "sausage": "salchicha", "bacon": "panceta", "chicken": "pollo",
+    "beef": "carne", "pork": "cerdo", "fish": "pescado", "tuna": "atun",
+    "shrimp": "camaron", "flour": "harina", "sugar": "azucar", "salt": "sal",
+    "oil": "aceite", "vinegar": "vinagre", "rice": "arroz", "noodles": "fideos",
+    "pasta": "fideos", "bread": "pan", "toast": "tostadas", "cereal": "cereal",
+    "oats": "avena", "honey": "miel", "jam": "mermelada", "coffee": "cafe",
+    "tea": "te", "juice": "jugo", "water": "agua", "beer": "cerveza",
+    "wine": "vino", "milk": "leche", "eggs": "huevo", "egg": "huevo",
+    "onion": "cebolla", "potato": "papa", "tomato": "tomate",
+    "lettuce": "lechuga", "carrot": "zanahoria", "apple": "manzana",
+    "banana": "banana", "orange": "naranja", "lemon": "limon",
+    "grapes": "uva", "strawberry": "frutilla", "peach": "durazno",
+    "pear": "pera", "watermelon": "sandia", "melon": "melon",
+    "avocado": "palta", "broccoli": "brocoli", "spinach": "espinaca",
+    "pepper": "pimienta", "oregano": "oregano", "cumin": "comino",
+    "cinnamon": "canela", "nutmeg": "nuez moscada", "garlic": "ajo",
+    "parsley": "perejil", "bay leaf": "laurel", "soup": "sopa",
+    "stock": "caldo", "sauce": "salsa", "ketchup": "ketchup",
+    "mustard": "mostaza", "mayonnaise": "mayonesa", "olives": "aceitunas",
+    "pickles": "encurtidos", "lentils": "lentejas", "beans": "porotos",
+    "chickpeas": "garbanzos", "peas": "arvejas", "corn": "choclo",
+    "pizza": "pizza", "empanada": "empanada", "sausages": "salchichas",
+    "chocolate": "chocolate", "biscuits": "galletitas", "crackers ": "galletitas",
+    "peanut butter": "manteca de mani", "nuts": "nueces", "almonds": "almendras",
+    "raisins": "pasas", "granola": "granola", "quinoa": "quinoa",
+    "tofu": "tofu", "hummus": "hummus", "soap": "jabon",
+    "toothbrush": "cepillo", "mouthwash": "enjuague", "floss": "hilo dental",
+    "bandages": "curitas", "alcohol": "alcohol", "cotton": "algodon",
+    "batteries": "pilas", "light bulb": "lampara", "trash bags": "bolsas",
+    "garbage bags": "bolsas", "foil": "aluminio", "plastic wrap": "film",
+    "sponge": "esponja", "broom": "escoba", "mop": "mopa", "bucket": "balde",
+    "gloves": "guantes", "mask": "barbijo", "candles": "velas",
+    "incense": "sahumerio", "air freshener": "aromatizante",
+    "insecticide": "insecticida", "matches": "fosforos", "lighter": "encendedor",
+}
+ENGLISH_QUERY_WORDS = {**_ENGLISH_SHOPPER_SYNONYMS, **ENGLISH_QUERY_WORDS}
 
 def _translate_query_words(query: str) -> str:
     """Map English catalogue words and phrases to the Spanish index terms."""
