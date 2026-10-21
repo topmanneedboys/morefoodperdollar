@@ -77,3 +77,45 @@ that produced intermittent 504s was removed.
 cd android && ./gradlew --no-daemon :app:testDebugUnitTest
 cd .. && PYTHONPATH=. python -m unittest discover -s backend/tests -p 'test_*.py'
 ```
+
+## Update: what the profiler proved about the remaining cold cost
+
+Measured in-container against the deployed image.
+
+| Scenario | Time | GCS range reads |
+| --- | --- | --- |
+| Cold query, before any caching | 19.9 s | ~20 (pack index) |
+| Query with no matches, after pack buffers | 0.11 s | 0 |
+| `leche`, first time on a fresh instance | 7.9 s | 41 |
+| Same query at a different point (record cache warm) | 0.94 s | 0 |
+
+Conclusions:
+
+1. Pack index reads are solved. Whole-file region buffers serve them from
+   memory (`SearchPackRegion._file_buffers`).
+2. The remaining 41 reads are **product offer partitions**, one small object
+   each. `ManifestReleaseArtifactStore.read_range` already loads and verifies a
+   whole object on first touch, so there is no single bulk read to collapse.
+3. The evidence cache (`VerifiedEvidenceCache`) was 128 MB and evicted
+   partitions between searches. Raised to 1 GiB, which is why the second query
+   now costs 0.94 s with zero reads.
+4. Region preload competes with live traffic: a cold search during the preload
+   window took 23 s. It is disabled by default
+   (`VALUEPILOT_PRELOAD_DELAY_SECONDS=3600`).
+
+## The last step, precisely scoped
+
+`MicroReader` query planning already has every partition for a region in
+`contract.partition_descriptors` and `contract.pack_descriptors` (path, offset,
+length, sha256, uncompressed size).
+
+To make a brand-new term instant:
+
+1. Prefetch a bounded subset of those partitions for the launch region only,
+   through the existing verified `_member` path, in a daemon thread started
+   after traffic settles (>= 60 s after instance start).
+2. Cap the budget well below the 1 GiB evidence cache (start at 256 MB) so
+   prefetching cannot evict the records it just loaded.
+3. Verify with `catalog-pass/profile_buffers.yaml` that a cold `sardinas` goes
+   from 41 reads to 0 before enabling a second region.
+4. Extend region by region; never all at once (that caused a 45 s outage).
