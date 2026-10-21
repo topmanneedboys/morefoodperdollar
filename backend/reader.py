@@ -616,7 +616,7 @@ class ArgentinaBackendReader:
                 # to GCS range reads (21 s cold vs 0.16 s warm).  The instance
                 # has 8 GiB, so keep the active packs resident instead.
                 self._searchpack = SearchPackManager(
-                    self.artifacts, manifest, cache_bytes=1024 * 1024 * 1024
+                    self.artifacts, manifest, cache_bytes=2048 * 1024 * 1024
                 )
             except SearchPackError as exc:
                 self._searchpack_error = str(exc)
@@ -1679,5 +1679,6 @@ class ArgentinaBackendReader:
 
 
 __all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CANDIDATE_CACHE_ENTRIES", "MAX_INPUT_CANDIDATE_UNION", "MAX_OFFER_PARTITION_CONCURRENCY", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+
 
 
