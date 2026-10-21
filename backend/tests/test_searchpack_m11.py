@@ -1682,3 +1682,19 @@ class SearchResponseCacheTests(unittest.TestCase):
         self.assertEqual(first["matches"], second["matches"])
         self.assertEqual(len(reader.discovery_calls), calls_after_first)
         self.assertNotEqual(first["requestId"], second["requestId"])
+
+    def test_cache_key_distinguishes_coordinates(self) -> None:
+        # Responses are keyed on exact coordinates so cached distances stay
+        # correct.  Sharing entries between nearby points must be a deliberate
+        # change that updates this test.
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+        base = {"latitude": "-34.6037", "longitude": "-58.3814", "radiusKm": "5", "query": "arroz", "page": 0}
+
+        service.search(dict(base))
+        calls_after_first = len(reader.discovery_calls)
+        service.search({**base, "latitude": "-34.6100"})
+
+        self.assertEqual(len(reader.discovery_calls), calls_after_first + 1)
