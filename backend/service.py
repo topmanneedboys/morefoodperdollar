@@ -716,6 +716,24 @@ class BackendService:
         else:
             # Compatibility for older test doubles and pre-wiring readers.
             candidates, metrics = reader.discover(discovery_query, region_ids=regions, product_limit=window_limit)
+        # A query such as "MOTOSIERRA 16 37 2 CC" has no catalogue match, so
+        # the ranker falls back to the numbers and returns unrelated products.
+        # If none of the query's meaningful words appears in any candidate,
+        # report no matches instead of noise.
+        meaningful = [
+            token for token in discovery_query.split()
+            if len(token) >= 5 and sum(character.isalpha() for character in token) >= 3
+        ]
+        has_model_number = any(
+            any(character.isdigit() for character in token) for token in discovery_query.split()
+        )
+        if meaningful and has_model_number and candidates:
+            matched = [
+                candidate for candidate in candidates
+                if any(token.casefold() in (candidate.get("name") or "").casefold() for token in meaningful)
+            ]
+            candidates = matched
+
         if not production_android_ui_authorized:
             # Identity discovery remains available under the narrower
             # identity-search authorization, but current price/store evidence
