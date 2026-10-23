@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 from collections import OrderedDict
@@ -71,7 +72,7 @@ MAX_CANDIDATES = 100_000
 DISCOVERY_CANDIDATE_BOUND = 25_000
 MAX_OFFERS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
-MAX_OFFER_PARTITION_CONCURRENCY = 4
+MAX_OFFER_PARTITION_CONCURRENCY = int(os.environ.get("VALUEPILOT_OFFER_CONCURRENCY", "8"))
 MAX_SEARCH_CACHE_ENTRIES = 512
 # Public identity discovery is deliberately paged.  The extra record lets the
 # service determine whether another bounded page exists without exposing an

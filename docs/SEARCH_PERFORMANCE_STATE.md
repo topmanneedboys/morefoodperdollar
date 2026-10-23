@@ -119,3 +119,19 @@ To make a brand-new term instant:
 3. Verify with `catalog-pass/profile_buffers.yaml` that a cold `sardinas` goes
    from 41 reads to 0 before enabling a second region.
 4. Extend region by region; never all at once (that caused a 45 s outage).
+
+## Concurrency experiment (measured on device, 6 queries each)
+
+| Configuration | Success | Median | Notes |
+| --- | --- | --- | --- |
+| 4 workers (original) | 6/6 | ~9-13 s | cold queries dominated by sequential reads |
+| 8 workers | 6/6 | **8.3 s** | best result |
+| 16 workers | 6/6 | 8.9 s | no gain; `queso` and `peanut` got worse |
+| 8 workers + 4 vCPU | 5/6 | 11.8 s | worse, and costs more |
+
+Conclusion: offer-partition loading is tunable via
+`VALUEPILOT_OFFER_CONCURRENCY` (default 8). Raising it past 8 does not help,
+and adding CPU does not help, which means the residual cost is per-object
+latency rather than thread scheduling or decode throughput.
+
+Best deployed configuration: 8 workers, 2 vCPU, 8 GiB.
