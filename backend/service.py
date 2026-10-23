@@ -72,6 +72,34 @@ _ENGLISH_SHOPPER_SYNONYMS = {
 }
 ENGLISH_QUERY_WORDS = {**_ENGLISH_SHOPPER_SYNONYMS, **ENGLISH_QUERY_WORDS}
 
+# US / UK / AU words that name the same product must reach the same family.
+_REGIONAL_ENGLISH = {
+    "cookies": "galletitas", "cookie": "galletitas", "biscuits": "galletitas", "biscuit": "galletitas",
+    "chips": "papas fritas", "crisps": "papas fritas", "french fries": "papas fritas", "fries": "papas fritas",
+    "soda": "gaseosa", "pop": "gaseosa", "soft drink": "gaseosa", "fizzy drink": "gaseosa",
+    "candy": "caramelos", "sweets": "caramelos", "lollies": "caramelos",
+    "diapers": "panales", "nappies": "panales", "nappy": "panal",
+    "eggplant": "berenjena", "aubergine": "berenjena",
+    "zucchini": "zucchini", "courgette": "zucchini",
+    "cilantro": "cilantro", "coriander": "cilantro",
+    "shrimp": "camaron", "prawns": "camaron",
+    "ground beef": "carne picada", "mince": "carne picada", "minced meat": "carne picada",
+    "whole milk": "leche entera", "full cream milk": "leche entera",
+    "skim milk": "leche descremada", "skimmed milk": "leche descremada",
+    "heavy cream": "crema de leche", "double cream": "crema de leche",
+    "yogurt": "yogur", "yoghurt": "yogur", "yoghourt": "yogur",
+    "stove": "cocina", "cooker": "cocina", "gas cooker": "cocina",
+    "trash bags": "bolsas", "rubbish bags": "bolsas", "garbage bags": "bolsas",
+    "paper towels": "papel de cocina", "kitchen roll": "papel de cocina",
+    "flashlight": "linterna", "torch": "linterna",
+    "vacuum cleaner": "aspiradora", "hoover": "aspiradora",
+    "trunk": "baul", "boot": "baul",
+}
+ENGLISH_QUERY_WORDS = {**ENGLISH_QUERY_WORDS, **_REGIONAL_ENGLISH}
+# Regional terms outrank generated phrase mappings ("cookies" -> pepas).
+ENGLISH_QUERY_PHRASES = {**ENGLISH_QUERY_PHRASES, **_REGIONAL_ENGLISH}
+
+
 def _translate_query_words(query: str) -> str:
     """Map English catalogue words and phrases to the Spanish index terms."""
     words = query.split()
