@@ -861,6 +861,18 @@ class ArgentinaBackendReader:
         """Calculate an exact, clearly based unit price from structured fields."""
 
         if product.get("quantityStatus") != "KNOWN":
+            # Bulk goods sold by weight ("... X KG") already price one kilo,
+            # so the list price is the unit price.  This is derived from the
+            # label itself, not invented.
+            name = " " + str(product.get("name") or "").upper()
+            if " X KG" in name or " X KGM" in name:
+                list_price = offer.get("listPrice")
+                if isinstance(list_price, Mapping) and list_price.get("amount"):
+                    return {
+                        "amount": str(list_price.get("amount")),
+                        "currency": str(list_price.get("currency") or "ARS"),
+                        "basis": "1 kg",
+                    }
             return None
         quantity = product.get("quantity")
         list_price = offer.get("listPrice")
