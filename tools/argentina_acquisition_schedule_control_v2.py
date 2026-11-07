@@ -1339,7 +1339,7 @@ def upstream_outage_result(
     near_limit = status == "FRESH" and days_remaining <= FRESHNESS_WARNING_WINDOW_DAYS
     base.update(
         {
-            "status": "UPSTREAM_TEMPORARILY_UNAVAILABLE" if status == "FRESH" else "FRESHNESS_LIMIT_EXCEEDED",
+            "status": "UPSTREAM_TEMPORARILY_UNAVAILABLE" if status == "FRESH" else "DOWNLOAD_REQUIRED",
             "activeRelease": {
                 "releaseDate": release_date,
                 "sourceSha256": current_source_sha256,
@@ -1354,6 +1354,7 @@ def upstream_outage_result(
                 "warningWindowDays": FRESHNESS_WARNING_WINDOW_DAYS,
             },
             "operatorAttentionRequired": near_limit or status != "FRESH",
+            "refreshReason": None if status == "FRESH" else "STALE_ACTIVE_RELEASE_MUST_REFRESH_THROUGH_VPN",
         }
     )
     return base
