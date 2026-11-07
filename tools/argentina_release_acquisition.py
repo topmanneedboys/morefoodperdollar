@@ -425,6 +425,8 @@ def discover_metadata(
     """
 
     observed = _iso_timestamp(observed_at)
+    if os.environ.get("SEPA_FORCE_STATIC") == "1":
+        return static_discovery(observed_at=observed, attempts=1, cause="FORCED_STATIC")
     validate_official_url(endpoint, expected_host=CATALOG_HOST, resolver=resolver)
     if isinstance(max_retries, bool) or not isinstance(max_retries, int) or max_retries < 1:
         raise AcquisitionError("metadata retry bound is invalid", code="INVALID_CONFIGURATION")
@@ -458,6 +460,12 @@ def discover_metadata(
                     raise
                 raise AcquisitionError("official metadata response is invalid", code="INVALID_METADATA") from exc
             if attempts >= attempts_limit:
+                if os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
+                    return static_discovery(
+                        observed_at=observed,
+                        attempts=attempts,
+                        cause=getattr(exc, "code", "NETWORK_ERROR"),
+                    )
                 raise AcquisitionError(
                     "official metadata remained temporarily unavailable after bounded retries",
                     code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
@@ -467,6 +475,12 @@ def discover_metadata(
                 ) from exc
             sleep_fn(METADATA_RETRY_BACKOFF_SECONDS * (2 ** (attempts - 1)))
     if raw is None:
+        if os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
+            return static_discovery(
+                observed_at=observed,
+                attempts=attempts,
+                cause=getattr(last_error, "code", "NETWORK_ERROR"),
+            )
         raise AcquisitionError(
             "official metadata remained temporarily unavailable after bounded retries",
             code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
@@ -511,6 +525,67 @@ def discover_metadata(
         attempts,
     )
 
+
+# Stable weekday bundles of the official Base SEPA dataset. Used only when the CKAN
+# catalogue API cannot be reached; the downloaded archive is validated either way.
+WEEKDAY_RESOURCES = {
+    0: ("lunes", "0a9069a9-06e8-4f98-874d-da5578693290"),
+    1: ("martes", "9dc06241-cc83-44f4-8e25-c9b1636b8bc8"),
+    2: ("miercoles", "1e92cd42-4f94-4071-a165-62c4cb2ce23c"),
+    3: ("jueves", "d076720f-a7f0-4af8-b1d6-1b99d5a90c14"),
+    4: ("viernes", "91bc072a-4726-44a1-85ec-4a8467aad27e"),
+    5: ("sabado", "b3c3da5d-213d-41e7-8d74-f23fda0a3c30"),
+    6: ("domingo", "f8e75128-515a-436e-bf8d-5c63a62f2005"),
+}
+DATASET_RESOURCE_BASE = "6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5"
+
+
+def static_weekday_candidate(*, observed_at: str) -> AcquisitionCandidate:
+    """Build the candidate for the current Argentina weekday without asking CKAN."""
+
+    observed = _iso_timestamp(observed_at)
+    moment = _dt.datetime.fromisoformat(observed.replace("Z", "+00:00"))
+    argentina_day = (moment + ARGENTINA_UTC_OFFSET).weekday()
+    name, resource_id = WEEKDAY_RESOURCES[argentina_day]
+    url = (
+        f"{SOURCE_HOST_URL}/dataset/{DATASET_RESOURCE_BASE}"
+        f"/resource/{resource_id}/download/sepa_{name}.zip"
+    )
+    digest = sha256_bytes(
+        json.dumps({"static": True, "resourceId": resource_id, "observedAt": observed},
+                   sort_keys=True, separators=(",", ":")).encode("utf-8")
+    )
+    return AcquisitionCandidate(
+        PROVIDER,
+        DATASET_ID,
+        resource_id,
+        f"sepa_{name}.zip",
+        url,
+        None,
+        None,
+        observed,
+        SOURCE_HOST,
+        digest,
+        None,
+        "static weekday fallback",
+        "ZIP",
+    )
+
+
+def static_discovery(*, observed_at: str, attempts: int, cause: str | None) -> DiscoveryResult:
+    observed = _iso_timestamp(observed_at)
+    candidate = static_weekday_candidate(observed_at=observed)
+    return DiscoveryResult(
+        CATALOG_ENDPOINT,
+        candidate.discovery_response_sha256,
+        observed,
+        DATASET_ID,
+        DATASET_NAME,
+        DATASET_TITLE,
+        LICENSE_TITLE,
+        (candidate,),
+        attempts,
+    )
 
 def select_latest_candidate(candidates: Sequence[AcquisitionCandidate]) -> AcquisitionCandidate:
     """Select the Argentina-local weekday resource before stale metadata hints.
