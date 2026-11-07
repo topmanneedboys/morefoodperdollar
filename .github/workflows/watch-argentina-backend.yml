@@ -1,0 +1,144 @@
+name: Watch Argentina backends
+
+# Why this exists
+#   The service sat at "not serving" for 19 days and nothing said so. The release it
+#   serves ages past the 7-day freshness limit (backend/clock.py) and the backend then
+#   fails closed, while scheduled acquisition does nothing unless
+#   ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
+#
+# What this does, hourly
+#   1. calls the real search endpoint on both regions
+#   2. if a region is not serving, dispatches the acquisition workflow once (self-heal)
+#   3. opens ONE issue per day (deduplicated), never a flood
+#   4. warns when the automation switch is off, because that is what makes it go stale
+
+on:
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: argentina-watchdog
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      US_URL: ${{ vars.VALUEPILOT_ARGENTINA_US_BACKEND_URL || 'https://valuepilot-argentina-us-east4-m72bv57hrq-uk.a.run.app' }}
+      SA_URL: ${{ vars.VALUEPILOT_ARGENTINA_SA_BACKEND_URL || 'https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app' }}
+      AUTO_FLAG: ${{ vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED }}
+      ACQUIRE_WORKFLOW: acquire-argentina-sepa-windscribe.yml
+    steps:
+      - name: Call search on both regions
+        id: probe
+        run: |
+          set -u
+          body='{"query":"tomate","limit":1}'
+          failed=""
+          for pair in "us:$US_URL" "sa:$SA_URL"; do
+            name="${pair%%:*}"; url="${pair#*:}"
+            code="$(curl -s -o /tmp/r.json -w '%{http_code}' --max-time 40 \
+                    -H 'Content-Type: application/json' -X POST -d "$body" \
+                    "$url/v1/search" || echo 000)"
+            echo "$name=$code" >> "$GITHUB_OUTPUT"
+            echo "$name -> HTTP $code"
+            if [ "$code" != "200" ]; then failed="$failed $name:$code"; fi
+            head -c 200 /tmp/r.json | sed "s/^/  $name body: /"; echo
+          done
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          echo "flag=${AUTO_FLAG:-unset}" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to self-heal
+        id: heal
+        if: steps.probe.outputs.failed != ''
+        run: |
+          set -u
+          # do not stack acquisitions: skip if one started in the last 90 minutes
+          recent="$(gh run list --workflow "$ACQUIRE_WORKFLOW" --limit 5 \
+                     --json createdAt,status \
+                     --jq '[.[] | select((.createdAt|fromdateiso8601) > (now - 5400))] | length' 2>/dev/null || echo 0)"
+          echo "recent acquisitions in last 90min: $recent"
+          if [ "${recent:-0}" -gt 0 ]; then
+            echo "dispatch=skip" >> "$GITHUB_OUTPUT"
+          else
+            echo "dispatch=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Self-heal by dispatching acquisition
+        if: steps.heal.outputs.dispatch == 'yes'
+        run: |
+          gh workflow run "$ACQUIRE_WORKFLOW" --ref "$GITHUB_REF_NAME" \
+            && echo "dispatched acquisition" \
+            || echo "::warning::could not dispatch acquisition (needs actions:write and the workflow on this branch)"
+
+      - name: Open one issue per day
+        if: steps.probe.outputs.failed != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const day = new Date().toISOString().slice(0,10);
+            const title = `Argentina backend not serving ${day} (${process.env.FAILED.trim()})`;
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'argentina-availability', per_page: 20
+            });
+            if (open.data.some(i => i.title.startsWith(`Argentina backend not serving ${day}`))) {
+              core.info('issue for today already open, not duplicating');
+              return;
+            }
+            const body = [
+              'Hourly probe could not get HTTP 200 from `/v1/search`.',
+              '',
+              '| region | status |', '|---|---|',
+              `| us | ${process.env.US} |`, `| sa | ${process.env.SA} |`,
+              '',
+              '`503` = running but failing closed: the served release is past the 7-day',
+              'freshness limit (`backend/clock.py`) or `control/active.json` names a release',
+              'that no longer exists in the bucket.',
+              '',
+              '`403` = auth/IAM, not availability.',
+              '',
+              'An acquisition run was dispatched automatically. If it also fails, the log of',
+              'that run is the next thing to read.',
+              '',
+              `Automation switch \`ARGENTINA_AUTOMATED_ACQUISITION_ENABLED\`: ${process.env.FLAG || 'unset'}`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title, body, labels: ['argentina-availability']
+            });
+        env:
+          FAILED: ${{ steps.probe.outputs.failed }}
+          US: ${{ steps.probe.outputs.us }}
+          SA: ${{ steps.probe.outputs.sa }}
+          FLAG: ${{ steps.probe.outputs.flag }}
+
+      - name: Warn when the automation switch is off
+        if: steps.probe.outputs.flag != 'true'
+        run: |
+          echo "::warning::ARGENTINA_AUTOMATED_ACQUISITION_ENABLED is not 'true' - scheduled acquisition is inert and the data will go stale."
+          {
+            echo "### Automation switch is off"
+            echo "Scheduled acquisition only runs when the repository variable"
+            echo "\`ARGENTINA_AUTOMATED_ACQUISITION_ENABLED\` is \`true\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### Argentina watchdog"
+            echo "- us: ${{ steps.probe.outputs.us }}"
+            echo "- sa: ${{ steps.probe.outputs.sa }}"
+            echo "- failed: ${{ steps.probe.outputs.failed || 'none' }}"
+            echo "- automation flag: ${{ steps.probe.outputs.flag }}"
+            echo "- self-heal dispatched: ${{ steps.heal.outputs.dispatch || 'no' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
