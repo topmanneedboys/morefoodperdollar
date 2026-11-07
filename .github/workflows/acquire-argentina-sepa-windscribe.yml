@@ -357,7 +357,7 @@ jobs:
             --retry 3 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
             -H 'Accept: application/json' \
             -H 'User-Agent: ValuePilot-release-worker/1' \
-            'https://datos.gob.ar/api/3/action/package_show?id=produccion-precios-claros---base-sepa' \
+            'https://datos.gob.ar/api/3/action/package_show?id=produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5' \
             -o "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
           probe_exit=$?
           set -e
