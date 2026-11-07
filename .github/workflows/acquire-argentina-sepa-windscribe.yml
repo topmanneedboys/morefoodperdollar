@@ -280,9 +280,51 @@ jobs:
             echo 'GOOGLE_GHA_CREDS_PATH='
           } >> "${GITHUB_ENV}"
 
+      - id: direct
+        name: Try direct acquisition without the tunnel
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
+        continue-on-error: true
+        shell: bash
+        env:
+          CURRENT_RELEASE_DATE: ${{ steps.current.outputs.release_date }}
+          CURRENT_SOURCE_SHA256: ${{ steps.current.outputs.source_sha }}
+          OBSERVED_AT: ${{ steps.preflight.outputs.observed_at }}
+          UPSTREAM_CHANGED: ${{ steps.preflight.outputs.upstream_changed }}
+        run: |
+          set -uo pipefail
+          handoff_args=(
+            --observed-at "${OBSERVED_AT}"
+            --current-release-date "${CURRENT_RELEASE_DATE}"
+            --current-source-sha256 "${CURRENT_SOURCE_SHA256}"
+            --archive-store "${LOCAL_ARCHIVE}"
+            --upstream-change-evidence "${PREFLIGHT_REPORT}"
+            --expected-discovery-response-sha256 "$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("catalogResponseSha256",""))' "${PREFLIGHT_REPORT}")"
+            --output "${HANDOFF_REPORT}"
+          )
+          if [[ "${UPSTREAM_CHANGED}" == "true" ]]; then
+            handoff_args+=(--upstream-changed)
+          fi
+          python -m tools.argentina_release_acquisition_handoff "${handoff_args[@]}"
+          rc=$?
+          if [[ ! -s "${HANDOFF_REPORT}" ]]; then
+            echo "direct acquisition produced no handoff report (rc=${rc}); the tunnel fallback will run"
+            exit 1
+          fi
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${HANDOFF_REPORT}")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "Direct acquisition disposition: ${status} (rc=${rc})"
+          if [[ "${rc}" != "0" ]]; then
+            echo "direct acquisition failed closed with status ${status}; the tunnel fallback will run"
+            exit 1
+          fi
+          case "${status}" in
+            HANDOFF_READY|NO_CHANGE|OLDER_REJECTED) ;;
+            *) echo "unexpected direct disposition ${status}"; exit 1 ;;
+          esac
+
       - id: acquire
         name: Acquire and verify official SEPA through Windscribe Buenos Aires
-        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED' && steps.direct.outcome != 'success'
         shell: bash
         env:
           WINDSCRIBE_WIREGUARD_CONFIG_B64: ${{ secrets.WINDSCRIBE_WIREGUARD_CONFIG_B64 }}
@@ -353,13 +395,13 @@ jobs:
           fi
           printf 'nameserver 1.1.1.1\nnameserver 1.0.0.1\noptions timeout:2 attempts:3\n' | sudo tee /etc/resolv.conf >/dev/null
           set +e
-          curl --fail --silent --show-error --max-time 30 \
-            --retry 3 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
-            -H 'Accept: application/json' \
-            -H 'User-Agent: ValuePilot-release-worker/1' \
-            'https://datos.gob.ar/api/3/action/package_show?id=produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5' \
-            -o "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
-          probe_exit=$?
+          probe_code="$(curl --silent --show-error --max-time 30 --head -o /dev/null \
+            --write-out '%{http_code}' 'https://datos.produccion.gob.ar/' || echo 000)"
+          echo "download-host probe inside the tunnel: HTTP ${probe_code}"
+          case "${probe_code}" in
+            2*|3*) probe_exit=0 ;;
+            *) probe_exit=1 ;;
+          esac
           set -e
           handshake="$(sudo wg show "${interface}" latest-handshakes | awk 'NR==1 {print $2}')"
           now="$(date +%s)"
@@ -422,7 +464,7 @@ jobs:
 
       - id: publish
         name: Publish exact verified source to private GCS archive
-        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+        if: steps.direct.outputs.status == 'HANDOFF_READY' || steps.acquire.outputs.status == 'HANDOFF_READY'
         shell: bash
         run: |
           set -euo pipefail
@@ -451,7 +493,7 @@ jobs:
             --archive-project "${GCP_PROJECT_ID}"
             --output "${RESOLUTION_REPORT}"
           )
-          if [[ "${{ steps.acquire.outputs.status }}" == "HANDOFF_READY" ]]; then
+          if [[ "${{ steps.direct.outputs.status }}" == "HANDOFF_READY" || "${{ steps.acquire.outputs.status }}" == "HANDOFF_READY" ]]; then
             args+=(--publish "${PUBLISH_REPORT}")
           fi
           python -m tools.argentina_acquisition_schedule_control_v2 "${args[@]}"
