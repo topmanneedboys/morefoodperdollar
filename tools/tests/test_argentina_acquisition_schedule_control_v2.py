@@ -434,7 +434,9 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(healthy["sameDayState"]["status"], "BUILD_RESERVED")
         self.assertEqual(near["freshness"]["state"], "NEARING_LIMIT")
         self.assertTrue(near["operatorAttentionRequired"])
-        self.assertEqual(stale["status"], "FRESHNESS_LIMIT_EXCEEDED")
+        self.assertEqual(stale["status"], "DOWNLOAD_REQUIRED")
+        self.assertEqual(stale["freshness"]["state"], "STALE")
+        self.assertEqual(stale["refreshReason"], "STALE_ACTIVE_RELEASE_MUST_REFRESH_THROUGH_VPN")
         self.assertEqual(unknown_active["status"], "ACTIVE_RELEASE_UNVERIFIED")
         self.assertEqual(unknown_active["freshness"]["state"], "UNVERIFIED")
         for result in (healthy, near, stale, unknown_active):
