@@ -551,8 +551,11 @@ def static_weekday_candidate(*, observed_at: str) -> AcquisitionCandidate:
         f"{SOURCE_HOST_URL}/dataset/{DATASET_RESOURCE_BASE}"
         f"/resource/{resource_id}/download/sepa_{name}.zip"
     )
+    # The digest must be identical for the same resource regardless of when it is
+    # computed: preflight and handoff both derive it, and a per-call timestamp made
+    # them disagree ("same-fingerprint ... catalogResponseSha256 conflicts").
     digest = sha256_bytes(
-        json.dumps({"static": True, "resourceId": resource_id, "observedAt": observed},
+        json.dumps({"static": True, "resourceId": resource_id},
                    sort_keys=True, separators=(",", ":")).encode("utf-8")
     )
     return AcquisitionCandidate(
