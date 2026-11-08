@@ -395,8 +395,9 @@ jobs:
           fi
           printf 'nameserver 1.1.1.1\nnameserver 1.0.0.1\noptions timeout:2 attempts:3\n' | sudo tee /etc/resolv.conf >/dev/null
           set +e
-          probe_code="$(curl --silent --show-error --max-time 30 --head -o /dev/null \
-            --write-out '%{http_code}' 'https://datos.produccion.gob.ar/' || echo 000)"
+          probe_code="$(curl --silent --show-error --max-time 30 --head \
+            --retry 3 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
+            -o /dev/null --write-out '%{http_code}' 'https://datos.produccion.gob.ar/' || echo 000)"
           echo "download-host probe inside the tunnel: HTTP ${probe_code}"
           case "${probe_code}" in
             2*|3*) probe_exit=0 ;;

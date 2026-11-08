@@ -460,7 +460,7 @@ def discover_metadata(
                     raise
                 raise AcquisitionError("official metadata response is invalid", code="INVALID_METADATA") from exc
             if attempts >= attempts_limit:
-                if os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
+                if fetcher is None and os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
                     return static_discovery(
                         observed_at=observed,
                         attempts=attempts,
@@ -475,7 +475,7 @@ def discover_metadata(
                 ) from exc
             sleep_fn(METADATA_RETRY_BACKOFF_SECONDS * (2 ** (attempts - 1)))
     if raw is None:
-        if os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
+        if fetcher is None and os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
             return static_discovery(
                 observed_at=observed,
                 attempts=attempts,
