@@ -16,6 +16,10 @@ on:
         description: "Type DELETE to actually remove the objects"
         required: true
         default: ""
+      include_attempts:
+        description: "Also release the day's build-attempt marker (one build per day)"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -71,6 +75,14 @@ jobs:
             echo "(not present)"
           done
 
+      - name: Show today's build-attempt markers
+        if: inputs.include_attempts == 'true'
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "----- acquisition/build-attempts/${{ steps.day.outputs.day }}/"
+          gcloud storage ls "gs://${CONTROL_BUCKET}/acquisition/build-attempts/${{ steps.day.outputs.day }}/" 2>/dev/null || echo "(none listed)"
+
       - name: Delete the stuck records
         if: inputs.confirm == 'DELETE'
         shell: bash
@@ -82,7 +94,13 @@ jobs:
                 gcloud storage rm "gs://${bucket}/${entry}" && echo "removed gs://${bucket}/${entry}"
               fi
             done
-          done
+          if [ "${{ inputs.include_attempts }}" = "true" ]; then
+            prefix="gs://${CONTROL_BUCKET}/acquisition/build-attempts/${{ steps.day.outputs.day }}/"
+            gcloud storage ls "$prefix" 2>/dev/null | while read -r object; do
+              [ -n "$object" ] || continue
+              gcloud storage rm "$object" && echo "removed ${object}"
+            done
+          fi
           echo "done"
 
       - name: Remaining state
