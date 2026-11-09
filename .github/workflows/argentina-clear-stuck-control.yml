@@ -94,12 +94,17 @@ jobs:
                 gcloud storage rm "gs://${bucket}/${entry}" && echo "removed gs://${bucket}/${entry}"
               fi
             done
+          done
           if [ "${{ inputs.include_attempts }}" = "true" ]; then
             prefix="gs://${CONTROL_BUCKET}/acquisition/build-attempts/${{ steps.day.outputs.day }}/"
-            gcloud storage ls "$prefix" 2>/dev/null | while read -r object; do
-              [ -n "$object" ] || continue
-              gcloud storage rm "$object" && echo "removed ${object}"
-            done
+            if gcloud storage ls "$prefix" >/dev/null 2>&1; then
+              gcloud storage ls "$prefix" 2>/dev/null | while read -r object; do
+                [ -n "$object" ] || continue
+                gcloud storage rm "$object" && echo "removed ${object}"
+              done
+            else
+              echo "no build-attempt markers under ${prefix}"
+            fi
           fi
           echo "done"
 
