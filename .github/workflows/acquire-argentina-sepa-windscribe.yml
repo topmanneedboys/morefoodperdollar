@@ -595,6 +595,11 @@ jobs:
           UPSTREAM_CHANGED: ${{ steps.preflight.outputs.upstream_changed }}
         run: |
           set -euo pipefail
+          reserved_id="$(python -c 'import json,sys; d=json.load(open(sys.argv[1], encoding="utf-8")); print(d.get("existingReservationId") or "")' "${ATTEMPT_REPORT}")"
+          if [ -n "${reserved_id}" ]; then
+            export EXECUTION_ID="${reserved_id}"
+            echo "Adopting the day's existing reservation id: ${EXECUTION_ID}"
+          fi
           export SOURCE_ARCHIVE_KEY="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveKey"])' "${ATTEMPT_REPORT}")"
           export SOURCE_ARCHIVE_SHA256="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveSha256"])' "${ATTEMPT_REPORT}")"
           data="$(python - <<'PY'
