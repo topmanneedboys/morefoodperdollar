@@ -43,22 +43,31 @@ jobs:
           set -u
           body='{"query":"tomate","limit":1}'
           failed=""
+          down=""
           for pair in "us:$US_URL" "sa:$SA_URL"; do
             name="${pair%%:*}"; url="${pair#*:}"
             code="$(curl -s -o /tmp/r.json -w '%{http_code}' --max-time 40 \
                     -H 'Content-Type: application/json' -X POST -d "$body" \
                     "$url/v1/search" || echo 000)"
             echo "$name=$code" >> "$GITHUB_OUTPUT"
-            echo "$name -> HTTP $code"
+            case "$code" in
+              200) verdict="serving" ;;
+              401|403) verdict="alive-auth-required" ;;
+              404) verdict="route-missing" ;;
+              000|5*) verdict="down"; down="$down $name:$code" ;;
+              *) verdict="unexpected" ;;
+            esac
+            echo "$name -> HTTP $code ($verdict)"
             if [ "$code" != "200" ]; then failed="$failed $name:$code"; fi
             head -c 200 /tmp/r.json | sed "s/^/  $name body: /"; echo
           done
           echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          echo "down=${down# }" >> "$GITHUB_OUTPUT"
           echo "flag=${AUTO_FLAG:-unset}" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether to self-heal
         id: heal
-        if: steps.probe.outputs.failed != ''
+        if: steps.probe.outputs.down != ''
         run: |
           set -u
           # do not stack acquisitions: skip if one started in the last 90 minutes
@@ -96,6 +105,12 @@ jobs:
             }
             const body = [
               'Hourly probe could not get HTTP 200 from `/v1/search`.',
+              '',
+              '**403/401 means the service is alive and gated by IAM** - not an outage. Only',
+              '000/5xx dispatches a self-heal run.',
+              '',
+              '**403/401 means the service is alive and gated by IAM** - not an outage. Only',
+              '000/5xx dispatches a self-heal run.',
               '',
               '| region | status |', '|---|---|',
               `| us | ${process.env.US} |`, `| sa | ${process.env.SA} |`,
