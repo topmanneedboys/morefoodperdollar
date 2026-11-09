@@ -80,8 +80,10 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          echo "----- acquisition/build-attempts/${{ steps.day.outputs.day }}/"
-          gcloud storage ls "gs://${CONTROL_BUCKET}/acquisition/build-attempts/${{ steps.day.outputs.day }}/" 2>/dev/null || echo "(none listed)"
+          for bucket in "${CONTROL_BUCKET}" "${ARCHIVE_BUCKET}"; do
+            echo "----- gs://${bucket}/acquisition/build-attempts/${{ steps.day.outputs.day }}/"
+            gcloud storage ls "gs://${bucket}/acquisition/build-attempts/${{ steps.day.outputs.day }}/" 2>/dev/null || echo "(none listed)"
+          done
 
       - name: Delete the stuck records
         if: inputs.confirm == 'DELETE'
@@ -96,15 +98,17 @@ jobs:
             done
           done
           if [ "${{ inputs.include_attempts }}" = "true" ]; then
-            prefix="gs://${CONTROL_BUCKET}/acquisition/build-attempts/${{ steps.day.outputs.day }}/"
-            if gcloud storage ls "$prefix" >/dev/null 2>&1; then
-              gcloud storage ls "$prefix" 2>/dev/null | while read -r object; do
-                [ -n "$object" ] || continue
-                gcloud storage rm "$object" && echo "removed ${object}"
-              done
-            else
-              echo "no build-attempt markers under ${prefix}"
-            fi
+            for bucket in "${CONTROL_BUCKET}" "${ARCHIVE_BUCKET}"; do
+              prefix="gs://${bucket}/acquisition/build-attempts/${{ steps.day.outputs.day }}/"
+              if gcloud storage ls "$prefix" >/dev/null 2>&1; then
+                gcloud storage ls "$prefix" 2>/dev/null | while read -r object; do
+                  [ -n "$object" ] || continue
+                  gcloud storage rm "$object" && echo "removed ${object}"
+                done
+              else
+                echo "no build-attempt markers under ${prefix}"
+              fi
+            done
           fi
           echo "done"
 
