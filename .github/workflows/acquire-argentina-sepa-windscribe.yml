@@ -553,17 +553,39 @@ jobs:
           echo "reservation_id=${reservation_id}" >> "${GITHUB_OUTPUT}"
           echo "Build reservation: ${status}"
 
-      - name: Stop cleanly when today's build is already reserved or candidate appeared concurrently
-        if: steps.reserve.outputs.status == 'ALREADY_RESERVED' || steps.reserve.outputs.status == 'CANDIDATE_PERSISTED'
+      - id: recover
+        name: Recover a reservation whose launch never happened
+        if: steps.reserve.outputs.status == 'ALREADY_RESERVED'
+        shell: bash
+        run: |
+          set -uo pipefail
+          pending=""
+          for bucket in "${ARCHIVE_BUCKET}" "${CONTROL_BUCKET}"; do
+            if gcloud storage cat "gs://${bucket}/control/pending-workflow.json" >/dev/null 2>&1; then
+              pending="gs://${bucket}/control/pending-workflow.json"
+              break
+            fi
+          done
+          if [ -n "${pending}" ]; then
+            echo "Build gate: ALREADY_RESERVED with a live pending workflow (${pending}); not launching."
+            echo "recover=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Build gate: ALREADY_RESERVED but no pending workflow exists - the previous launch never"
+            echo "started, so this reservation is dead. Launching the build for this candidate."
+            echo "recover=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Stop cleanly when the candidate is already persisted
+        if: steps.reserve.outputs.status == 'CANDIDATE_PERSISTED'
         shell: bash
         run: |
           set -euo pipefail
           echo "Build gate: ${{ steps.reserve.outputs.status }}"
-          echo "No duplicate heavy build will be started."
+          echo "The candidate release already exists, so no build is started."
 
       - id: launch
         name: Start one asynchronous Google SHADOW release workflow
-        if: steps.reserve.outputs.status == 'RESERVED'
+        if: steps.reserve.outputs.status == 'RESERVED' || steps.recover.outputs.recover == 'true'
         shell: bash
         env:
           CURRENT_RELEASE_DATE: ${{ steps.current.outputs.release_date }}
