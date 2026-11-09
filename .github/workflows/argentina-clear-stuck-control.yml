@@ -1,0 +1,93 @@
+name: Clear stuck Argentina control state
+
+# One-off recovery: the control plane keeps a durable "pending build" pointer and a
+# per-day journal. Failed or abandoned launches leave a pending identity behind, and
+# every later launch then fails with CONTROL_CONFLICT ("pending workflow identity
+# conflicts"). This workflow removes only those two records, printing them first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      argentina_day:
+        description: "Argentina day to clear (YYYY-MM-DD). Empty = today in Buenos Aires."
+        required: false
+        default: ""
+      confirm:
+        description: "Type DELETE to actually remove the objects"
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: argentina-production
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
+      CONTROL_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_CONTROL_BUCKET }}
+      ARCHIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ARCHIVE_BUCKET }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Authenticate
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Resolve target day
+        id: day
+        shell: bash
+        run: |
+          set -euo pipefail
+          day="${{ inputs.argentina_day }}"
+          if [ -z "$day" ]; then
+            day="$(TZ=America/Argentina/Buenos_Aires date +%F)"
+          fi
+          echo "day=$day" >> "$GITHUB_OUTPUT"
+          echo "target Argentina day: $day"
+
+      - name: Show what is there now
+        shell: bash
+        run: |
+          set -uo pipefail
+          for entry in "control/pending-workflow.json" "acquisition/daily-state/${{ steps.day.outputs.day }}.json"; do
+            echo "----- $entry"
+            gcloud storage cat "gs://${CONTROL_BUCKET}/${entry}" 2>/dev/null || \
+            gcloud storage cat "gs://${ARCHIVE_BUCKET}/${entry}" 2>/dev/null || \
+            echo "(not present)"
+          done
+
+      - name: Delete the stuck records
+        if: inputs.confirm == 'DELETE'
+        shell: bash
+        run: |
+          set -uo pipefail
+          for entry in "control/pending-workflow.json" "acquisition/daily-state/${{ steps.day.outputs.day }}.json"; do
+            for bucket in "${CONTROL_BUCKET}" "${ARCHIVE_BUCKET}"; do
+              if gcloud storage cat "gs://${bucket}/${entry}" >/dev/null 2>&1; then
+                gcloud storage rm "gs://${bucket}/${entry}" && echo "removed gs://${bucket}/${entry}"
+              fi
+            done
+          done
+          echo "done"
+
+      - name: Remaining state
+        if: always()
+        shell: bash
+        run: |
+          echo "### Argentina control state cleared for ${{ steps.day.outputs.day }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "confirm input: ${{ inputs.confirm }}" >> "$GITHUB_STEP_SUMMARY"
