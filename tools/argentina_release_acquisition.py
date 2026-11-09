@@ -554,8 +554,12 @@ def static_weekday_candidate(*, observed_at: str) -> AcquisitionCandidate:
     # The digest must be identical for the same resource regardless of when it is
     # computed: preflight and handoff both derive it, and a per-call timestamp made
     # them disagree ("same-fingerprint ... catalogResponseSha256 conflicts").
+    # Key the digest by the Argentina calendar day, not by the wall clock: preflight
+    # and handoff must agree within a day, while a new day must start a new observation
+    # (a globally identical fingerprint made yesterday's record conflict forever).
+    argentina_date = (moment + ARGENTINA_UTC_OFFSET).date().isoformat()
     digest = sha256_bytes(
-        json.dumps({"static": True, "resourceId": resource_id},
+        json.dumps({"static": True, "resourceId": resource_id, "argentinaDate": argentina_date},
                    sort_keys=True, separators=(",", ":")).encode("utf-8")
     )
     return AcquisitionCandidate(
