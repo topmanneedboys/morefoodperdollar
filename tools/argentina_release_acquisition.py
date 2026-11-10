@@ -425,8 +425,13 @@ def discover_metadata(
     """
 
     observed = _iso_timestamp(observed_at)
-    if os.environ.get("SEPA_FORCE_STATIC") == "1":
+    if fetcher is None and os.environ.get("SEPA_FORCE_STATIC") == "1":
         return static_discovery(observed_at=observed, attempts=1, cause="FORCED_STATIC")
+    # Production discovery is deterministic on purpose: mixing the CKAN response with the
+    # static weekday response for one day produced two catalogResponseSha256 values under a
+    # single fingerprint, which the control plane rejects as CONTROL_CONFLICT forever.
+    if fetcher is None and os.environ.get("SEPA_STATIC_DISCOVERY", "1") != "0":
+        return static_discovery(observed_at=observed, attempts=1, cause="DETERMINISTIC_STATIC")
     validate_official_url(endpoint, expected_host=CATALOG_HOST, resolver=resolver)
     if isinstance(max_retries, bool) or not isinstance(max_retries, int) or max_retries < 1:
         raise AcquisitionError("metadata retry bound is invalid", code="INVALID_CONFIGURATION")
