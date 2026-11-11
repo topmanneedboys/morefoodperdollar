@@ -56,10 +56,10 @@ jobs:
         run: |
           set -uo pipefail
           echo "----- gcloud builds list (latest 6)"
-          gcloud builds list --limit 6 --format='table(id,status,createTime,duration,source.storageSource.object)' 2>&1 | sed 's/^/  /'
+          gcloud builds list --limit 6 --format='table(id,status,createTime,duration,source.storageSource.object)' 2>&1 | sed 's/^/  /' || echo "  (builds list is not permitted for the release service account)"
 
       - name: Recent workflow executions
-        if: env.RELEASE_WORKFLOW_NAME != '' && env.RELEASE_WORKFLOW_LOCATION != ''
+        if: always() && env.RELEASE_WORKFLOW_NAME != '' && env.RELEASE_WORKFLOW_LOCATION != ''
         shell: bash
         run: |
           set -uo pipefail
