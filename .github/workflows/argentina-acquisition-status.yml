@@ -1,0 +1,74 @@
+name: Argentina acquisition status
+
+# Read-only diagnostics. Answers "is the build actually running, and how far did it get"
+# without touching the control plane. The 2026-11-10 build sat at SHADOW_STARTED for over
+# twelve hours with no visible Cloud Build state from outside, which is what this is for.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: argentina-production
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
+      CONTROL_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_CONTROL_BUCKET }}
+      ARCHIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ARCHIVE_BUCKET }}
+      RELEASE_WORKFLOW_NAME: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_NAME }}
+      RELEASE_WORKFLOW_LOCATION: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_LOCATION }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Control state
+        shell: bash
+        run: |
+          set -uo pipefail
+          day="$(TZ=America/Argentina/Buenos_Aires date +%F)"
+          echo "Argentina day: $day"
+          for path in "control/pending-workflow.json" "acquisition/daily-state/${day}.json"; do
+            for bucket in "${ARCHIVE_BUCKET}" "${CONTROL_BUCKET}"; do
+              if gcloud storage cat "gs://${bucket}/${path}" >/dev/null 2>&1; then
+                echo "----- gs://${bucket}/${path}"
+                gcloud storage cat "gs://${bucket}/${path}" | head -c 1200; echo
+              fi
+            done
+          done
+
+      - name: Recent Cloud Builds
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "----- gcloud builds list (latest 6)"
+          gcloud builds list --limit 6 --format='table(id,status,createTime,duration,source.storageSource.object)' 2>&1 | sed 's/^/  /'
+
+      - name: Recent workflow executions
+        if: env.RELEASE_WORKFLOW_NAME != '' && env.RELEASE_WORKFLOW_LOCATION != ''
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "----- workflow executions (latest 6)"
+          gcloud workflows executions list "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" --limit 6 \
+            --format='table(name.basename(),state,startTime,endTime)' 2>&1 | sed 's/^/  /'
+
+      - name: Summarise
+        if: always()
+        shell: bash
+        run: echo "Read-only status probe completed." >> "$GITHUB_STEP_SUMMARY"
