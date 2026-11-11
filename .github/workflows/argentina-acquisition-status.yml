@@ -56,17 +56,18 @@ jobs:
         run: |
           set -uo pipefail
           echo "----- gcloud builds list (latest 6)"
-          gcloud builds list --limit 6 --format='table(id,status,createTime,duration,source.storageSource.object)' 2>&1 | sed 's/^/  /'
+          gcloud builds list --limit 6 --format='table(id,status,createTime,duration,source.storageSource.object)' 2>&1 | sed 's/^/  /' || echo "  (cloudbuild.builds.list is not permitted for this service account)"
 
       - name: Recent workflow executions
-        if: env.RELEASE_WORKFLOW_NAME != '' && env.RELEASE_WORKFLOW_LOCATION != ''
+        if: always()
         shell: bash
         run: |
           set -uo pipefail
           echo "----- workflow executions (latest 6)"
           gcloud workflows executions list "${RELEASE_WORKFLOW_NAME}" \
             --location "${RELEASE_WORKFLOW_LOCATION}" --limit 6 \
-            --format='table(name.basename(),state,startTime,endTime)' 2>&1 | sed 's/^/  /'
+            --format='table(name.basename(),state,startTime,endTime)' 2>&1 | sed 's/^/  /' \
+            || echo "  (workflows.executions.list is not permitted for this service account)"
 
       - name: Summarise
         if: always()
