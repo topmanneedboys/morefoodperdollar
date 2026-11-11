@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      promote_release:
+        description: Promote an already verified candidate release id through CAS + smoke checks
+        required: false
+        default: ""
+        type: string
   schedule:
     # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
     # Every day, including weekends. Every phase re-discovers authoritative metadata
@@ -941,10 +946,10 @@ jobs:
             --output "${RUNNER_TEMP}/valuepilot-access-report.json"
 
       - name: Promote the verified candidate with CAS, smoke checks, and rollback
-        if: inputs.verify_promotion_access != true && steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'
+        if: inputs.verify_promotion_access != true && inputs.promote_release != '' || (inputs.verify_promotion_access != true && steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
         shell: bash
         env:
-          CANDIDATE_RELEASE: ${{ steps.state.outputs.candidate_release }}
+          CANDIDATE_RELEASE: ${{ inputs.promote_release || steps.state.outputs.candidate_release }}
           VALUEPILOT_SMOKE_ID_TOKEN_US: ${{ steps.smoke-us-auth.outputs.id_token }}
           VALUEPILOT_SMOKE_ID_TOKEN_SA: ${{ steps.smoke-sa-auth.outputs.id_token }}
         run: |
