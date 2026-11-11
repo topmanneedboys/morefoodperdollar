@@ -1,0 +1,65 @@
+name: Deploy Argentina release workflow
+
+# ARGENTINA_RELEASE_WORKFLOW.yaml is the source of truth for the Cloud Workflow that
+# actually builds releases. Editing it in the repo changes nothing until it is deployed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only print the current deployment (no update)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: argentina-production
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID || 'valuepilot-argentina' }}
+      RELEASE_WORKFLOW_NAME: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_NAME }}
+      RELEASE_WORKFLOW_LOCATION: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_LOCATION }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Show what is deployed now
+        shell: bash
+        run: |
+          set -uo pipefail
+          gcloud workflows describe "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" \
+            --format='yaml(name,state,serviceAccount,revisionId)' 2>&1 | sed 's/^/  /' \
+            || echo "  (workflows.get is not permitted)"
+
+      - name: Deploy the checked-in definition
+        if: inputs.dry_run != 'true'
+        shell: bash
+        run: |
+          set -uo pipefail
+          account="$(gcloud workflows describe "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" \
+            --format='value(serviceAccount)' 2>/dev/null || true)"
+          args=(workflows deploy "${RELEASE_WORKFLOW_NAME}"
+                --location "${RELEASE_WORKFLOW_LOCATION}"
+                --source ARGENTINA_RELEASE_WORKFLOW.yaml --quiet)
+          if [ -n "${account}" ]; then
+            args+=(--service-account "${account}")
+          fi
+          gcloud "${args[@]}" 2>&1 | sed 's/^/  /'
+          echo "deploy exit: $?"
