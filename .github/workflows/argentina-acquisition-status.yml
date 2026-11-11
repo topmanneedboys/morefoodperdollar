@@ -86,6 +86,23 @@ jobs:
               || echo "  (workflows.executions.get is not permitted for this service account)"
           fi
 
+      - name: Workflow definition around discovery
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          gcloud workflows describe "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" \
+            --format='value(sourceContents)' > "${RUNNER_TEMP}/wf.yaml" 2>/dev/null || true
+          if [ -s "${RUNNER_TEMP}/wf.yaml" ]; then
+            echo "===== discovery-related steps ====="
+            grep -n -A4 -B2 -i 'discovery_failed\|discovery' "${RUNNER_TEMP}/wf.yaml" | head -80
+            echo "===== HTTP calls ====="
+            grep -n -i 'datos\.gob\.ar\|precios-claros\|http' "${RUNNER_TEMP}/wf.yaml" | head -40
+          else
+            echo "(workflow source unavailable - workflows.get not permitted)"
+          fi
+
       - name: Summarise
         if: always()
         shell: bash
