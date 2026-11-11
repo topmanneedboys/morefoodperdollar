@@ -902,7 +902,7 @@ jobs:
 
       - name: Authenticate US regional smoke checks
         id: smoke-us-auth
-        if: inputs.verify_promotion_access == true || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
+        if: always() && (inputs.verify_promotion_access == true || inputs.promote_release != '' || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'))
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
@@ -916,7 +916,7 @@ jobs:
 
       - name: Authenticate SA regional smoke checks
         id: smoke-sa-auth
-        if: inputs.verify_promotion_access == true || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
+        if: always() && (inputs.verify_promotion_access == true || inputs.promote_release != '' || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'))
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
@@ -946,7 +946,7 @@ jobs:
             --output "${RUNNER_TEMP}/valuepilot-access-report.json"
 
       - name: Promote the verified candidate with CAS, smoke checks, and rollback
-        if: inputs.verify_promotion_access != true && inputs.promote_release != '' || (inputs.verify_promotion_access != true && steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
+        if: always() && inputs.verify_promotion_access != true && (inputs.promote_release != '' || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'))
         shell: bash
         env:
           CANDIDATE_RELEASE: ${{ inputs.promote_release || steps.state.outputs.candidate_release }}
