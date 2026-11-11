@@ -69,6 +69,23 @@ jobs:
             --format='table(name.basename(),state,startTime,endTime)' 2>&1 | sed 's/^/  /' \
             || echo "  (workflows.executions.list is not permitted for this service account)"
 
+      - name: Latest execution detail
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          latest="$(gcloud workflows executions list "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" --limit 1 \
+            --format='value(name.basename())' 2>/dev/null || true)"
+          echo "----- latest execution: ${latest:-unknown}"
+          if [ -n "${latest}" ]; then
+            gcloud workflows executions describe "${latest}" \
+              --workflow "${RELEASE_WORKFLOW_NAME}" \
+              --location "${RELEASE_WORKFLOW_LOCATION}" \
+              --format='yaml(state,error,status)' 2>&1 | sed 's/^/  /' \
+              || echo "  (workflows.executions.get is not permitted for this service account)"
+          fi
+
       - name: Summarise
         if: always()
         shell: bash
