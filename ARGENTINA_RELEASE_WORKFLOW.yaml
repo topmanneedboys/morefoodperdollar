@@ -29,7 +29,7 @@ main:
           - source_bucket: ${args.sourceBucket}
           - source_object: ${args.sourceObject}
           - source_generation: ${args.sourceGeneration}
-          - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa"
+          - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5"
           - state_object: "control/workflow-discovery-state.json"
           - execution_id: ${default(map.get(args, "executionId"), sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
           - current_release_date: ${default(map.get(args, "currentReleaseDate"), "")}
@@ -105,12 +105,12 @@ main:
               status: DISCOVERY_FAILED
               reason: CATALOG_RESPONSE_NOT_SUCCESS
               cloudBuildStarted: false
-          - condition: ${catalog_response.body.result.id != "0f495d54-4a5d-5fa3-a323-f6e97ce434cf"}
+          - condition: ${catalog_response.body.result.id != "produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5"}
             return:
               status: SOURCE_CONTRACT_CHANGED
               reason: DATASET_ID_CHANGED
               cloudBuildStarted: false
-          - condition: ${catalog_response.body.result.name != "precios-claros-base-sepa"}
+          - condition: ${catalog_response.body.result.name != "produccion-precios-claros---base-sepa"}
             return:
               status: SOURCE_CONTRACT_CHANGED
               reason: DATASET_NAME_CHANGED
