@@ -566,9 +566,20 @@ jobs:
               break
             fi
           done
+          stale="false"
           if [ -n "${pending}" ]; then
+            gcloud storage cat "${pending}" > "${RUNNER_TEMP}/pending.json" 2>/dev/null || true
+            if [ -s "${RUNNER_TEMP}/pending.json" ]; then
+              stale="$(python -c 'import datetime as dt, json, sys; w = dt.datetime.fromisoformat(json.load(open(sys.argv[1], encoding="utf-8"))["updatedAt"].replace("Z", "+00:00")); print("true" if (dt.datetime.now(dt.timezone.utc) - w).total_seconds() >= 21600 else "false")' "${RUNNER_TEMP}/pending.json" 2>/dev/null || echo false)"
+            fi
+          fi
+          if [ -n "${pending}" ] && [ "${stale}" != "true" ]; then
             echo "Build gate: ALREADY_RESERVED with a live pending workflow (${pending}); not launching."
             echo "recover=false" >> "${GITHUB_OUTPUT}"
+          elif [ -n "${pending}" ]; then
+            echo "Build gate: ALREADY_RESERVED and the pending pointer has been idle for hours;"
+            echo "no live build can exist, so this launch proceeds."
+            echo "recover=true" >> "${GITHUB_OUTPUT}"
           else
             echo "Build gate: ALREADY_RESERVED but no pending workflow exists - the previous launch never"
             echo "started, so this reservation is dead. Launching the build for this candidate."
