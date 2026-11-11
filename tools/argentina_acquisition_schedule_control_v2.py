@@ -60,6 +60,8 @@ DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v2"
 LEGACY_DAILY_STATE_SCHEMA_VERSION = "valuepilot-argentina-daily-state-v1"
 LEGACY_DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v1"
 DAILY_STATE_EVENT_MAX = 128
+# How long a SHADOW_STARTED record may sit untouched before it is treated as dead.
+SHADOW_IDLE_HOURS = 6
 PENDING_WORKFLOW_KEY = "control/pending-workflow.json"
 PENDING_WORKFLOW_SCHEMA_VERSION = "valuepilot-argentina-pending-workflow-v1"
 PENDING_WORKFLOW_STATES = frozenset({"SHADOW_STARTED", "SHADOW_PENDING", "SHADOW_SUCCEEDED", "SHADOW_FAILED"})
@@ -393,6 +395,22 @@ def _merge_daily_state_records(
         if record.get("metadataFingerprint") == selected_fingerprint
     ]
     selected.sort(key=lambda item: (parsed_time(item[1]), item[0]))
+
+    # A SHADOW_STARTED record whose execution never came back is dead evidence. Drop it
+    # before the identity comparison, otherwise a retry (which always carries a new
+    # execution id) can never be recorded and the day is lost.
+    superseded_cutoff = latest_time - _dt.timedelta(hours=SHADOW_IDLE_HOURS)
+    live = [
+        (digest, record)
+        for digest, record in selected
+        if not (
+            str(record.get("status") or record.get("durableStatus") or "") == "SHADOW_STARTED"
+            and parsed_time(record) < superseded_cutoff
+        )
+    ]
+    if live:
+        selected = live
+
     merged = dict(selected[-1][1])
 
     # The metadata identity and exact catalog response remain immutable anchors
