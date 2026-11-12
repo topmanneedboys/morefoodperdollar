@@ -1,12 +1,33 @@
 """FastAPI HTTP surface for ValuePilot's read-only backend."""
 
 import os
+import threading
 import uuid
 from typing import Any
 
 from .object_store import GCSObjectStore, ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
 from .release import ReleaseManager
 from .service import BackendService, MAX_REQUEST_BYTES, ResponseLimitError
+
+
+class _LazyService:
+    """Construct the backend service on first use instead of during app creation."""
+
+    def __init__(self, service: Any = None) -> None:
+        self._service = service
+        self._lock = threading.Lock()
+
+    def _resolve(self) -> Any:
+        if self._service is None:
+            with self._lock:
+                if self._service is None:
+                    self._service = _runtime_service()
+        return self._service
+
+    def __getattr__(self, name: str) -> Any:
+        if name in {"_service", "_lock"}:
+            raise AttributeError(name)
+        return getattr(self._resolve(), name)
 
 
 def _runtime_service() -> BackendService:
@@ -104,7 +125,7 @@ def create_app(service: BackendService | None = None):
         text: StrictStr = Field(min_length=1, max_length=4096)
 
     app = FastAPI(title="ValuePilot Argentina Backend", version="valuepilot-argentina-backend-v1", docs_url=None, redoc_url=None, openapi_url=None)
-    runtime_service = service or _runtime_service()
+    runtime_service = service if service is not None else _LazyService()
 
     @app.middleware("http")
     async def bounded_body(request: Request, call_next):
