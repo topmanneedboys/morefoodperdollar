@@ -811,11 +811,11 @@ jobs:
           if not value:
               raise SystemExit("::error::Active Argentina release date is unavailable")
           age = (datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date() - date.fromisoformat(value)).days
-          print(f"Active Argentina release age: {age} day(s); the backend fails closed at 7.")
+          print(f"Active Argentina release age: {age} day(s); the backend fails closed at 10.")
           if age >= 6:
               raise SystemExit(
                   "::error::Active Argentina release is "
-                  f"{age} days old; a refresh must land before the 7-day fail-closed limit."
+                  f"{age} days old; a refresh must land before the 10-day fail-closed limit."
               )
           PY
 

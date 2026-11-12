@@ -410,14 +410,14 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         )
         near = upstream_outage_result(
             observed_at="2026-09-22T16:30:00Z",
-            current_release_date="2026-09-16",
+            current_release_date="2026-09-14",
             current_source_sha256="a" * 64,
             error=error,
             same_day_state=None,
         )
         stale = upstream_outage_result(
             observed_at="2026-09-22T16:30:00Z",
-            current_release_date="2026-09-14",
+            current_release_date="2026-09-10",
             current_source_sha256="a" * 64,
             error=error,
             same_day_state=None,
