@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 
 ARGENTINA_ZONE = ZoneInfo("America/Argentina/Buenos_Aires")
-DEFAULT_MAX_RELEASE_AGE_DAYS = 7
+DEFAULT_MAX_RELEASE_AGE_DAYS = 10
 
 
 class Clock(Protocol):
