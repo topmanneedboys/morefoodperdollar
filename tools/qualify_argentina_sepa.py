@@ -834,7 +834,25 @@ def _promotion_values(row: list[str], indexes: Mapping[str, int]) -> list[dict[s
 def _quantity_value(row: list[str], indexes: Mapping[str, int]) -> tuple[dict[str, Any] | None, str]:
     raw_value = _clean(_row_value(row, indexes, "productos_cantidad_presentacion"))
     raw_unit = _clean(_row_value(row, indexes, "productos_unidad_medida_presentacion"))
+    raw_name = _clean(_row_value(row, indexes, "productos_nombre"))
     parsed = parse_quantity(raw_value, raw_unit)
+
+    # Imported lazily: this module is imported while tools/__init__ is still running.
+    try:
+        from tools import argentina_quantity
+    except ModuleNotFoundError:  # direct invocation from tools/
+        import argentina_quantity
+
+    # A real measure in the name beats a generic "1 un" presentation.
+    name_size = argentina_quantity.parse_size(raw_name)
+    if name_size["kind"] in {"volume", "mass"}:
+        if parsed is None or parsed[0] == "COUNT":
+            # canonical units used by this module: MILLILITRE / GRAM / COUNT
+            canonical = {"L": ("MILLILITRE", 1000), "kg": ("GRAM", 1000)}[name_size["unit"]]
+            amount = Decimal(str(name_size["quantity"])) * canonical[1]
+            parsed = (canonical[0], amount)
+            raw_value = _clean(f"{name_size['quantity']} {name_size['unit']}")
+
     if parsed is None:
         return None, "UNKNOWN"
     unit, amount = parsed
