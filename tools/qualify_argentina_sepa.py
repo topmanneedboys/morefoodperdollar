@@ -846,8 +846,11 @@ def _quantity_value(row: list[str], indexes: Mapping[str, int]) -> tuple[dict[st
     # A real measure in the name beats a generic "1 un" presentation.
     name_size = argentina_quantity.parse_size(raw_name)
     if name_size["kind"] in {"volume", "mass"}:
-        if parsed is None or parsed[0] == "count":
-            parsed = (name_size["unit"], Decimal(str(name_size["quantity"])))
+        if parsed is None or parsed[0] == "COUNT":
+            # canonical units used by this module: MILLILITRE / GRAM / COUNT
+            canonical = {"L": ("MILLILITRE", 1000), "kg": ("GRAM", 1000)}[name_size["unit"]]
+            amount = Decimal(str(name_size["quantity"])) * canonical[1]
+            parsed = (canonical[0], amount)
             raw_value = _clean(f"{name_size['quantity']} {name_size['unit']}")
 
     if parsed is None:
