@@ -1,0 +1,87 @@
+name: Retry Argentina acquisition
+
+# The release path depends on datos.gob.ar, which is only intermittently reachable from
+# Google's US region: discovery succeeded at 22:24 and timed out at 23:50 the same day.
+# A single scheduled attempt therefore misses often and the release goes stale.
+#
+# This workflow re-dispatches the acquisition when the active release is older than two
+# days, and never stacks runs: it skips if an acquisition started in the last 45 minutes.
+
+on:
+  schedule:
+    - cron: '25 */2 * * *'      # every two hours, offset from the main schedule
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: argentina-retry-acquisition
+  cancel-in-progress: false
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ACQUIRE_WORKFLOW: acquire-argentina-sepa-windscribe.yml
+      ACTIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ACTIVE_BUCKET }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID || 'valuepilot-argentina' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: How old is the active release
+        id: age
+        shell: bash
+        run: |
+          set -uo pipefail
+          release_date="$(gcloud storage cat "gs://${ACTIVE_BUCKET}/control/active.json" 2>/dev/null \
+            | python -c 'import json,sys,re; d=json.load(sys.stdin); rid=d["releaseId"]; m=re.search(r"(\d{4}-\d{2}-\d{2})", rid); print(m.group(1) if m else "")' || echo "")"
+          today="$(TZ=America/Argentina/Buenos_Aires date +%F)"
+          echo "release=$release_date today=$today"
+          echo "release=$release_date" >> "$GITHUB_OUTPUT"
+          if [ -z "$release_date" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          age=$(( ( $(date -d "$today" +%s) - $(date -d "$release_date" +%s) ) / 86400 ))
+          echo "age=$age"
+          if [ "$age" -ge 2 ]; then echo "stale=true" >> "$GITHUB_OUTPUT"; else echo "stale=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Skip if an acquisition just ran
+        id: guard
+        shell: bash
+        run: |
+          set -uo pipefail
+          recent="$(gh run list --workflow "$ACQUIRE_WORKFLOW" --limit 5 --json createdAt \
+                    --jq '[.[] | select((.createdAt|fromdateiso8601) > (now - 2700))] | length')"
+          echo "recent acquisitions in last 45 min: ${recent:-0}"
+          if [ "${recent:-0}" -gt 0 ]; then echo "dispatch=no" >> "$GITHUB_OUTPUT"; else echo "dispatch=yes" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Dispatch a fresh acquisition
+        if: steps.age.outputs.stale == 'true' && steps.guard.outputs.dispatch == 'yes'
+        run: |
+          gh workflow run "$ACQUIRE_WORKFLOW" --ref "$GITHUB_REF_NAME" && echo "dispatched"
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### Argentina acquisition retry"
+            echo "- active release: ${{ steps.age.outputs.release }}"
+            echo "- stale: ${{ steps.age.outputs.stale }}"
+            echo "- dispatched: ${{ steps.guard.outputs.dispatch }}"
+          } >> "$GITHUB_STEP_SUMMARY"
