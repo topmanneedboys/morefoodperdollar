@@ -31,6 +31,9 @@ main:
           - source_generation: ${args.sourceGeneration}
           - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5"
           - state_object: "control/workflow-discovery-state.json"
+          # The dataset identity is fixed; reading it from the catalogue API on every
+          # run made an unreachable API block builds that already had verified bytes.
+          - dataset_id: "produccion_6f47ec76-d1ce-4e34-a7e1-621fe9b1d0b5"
           - execution_id: ${default(map.get(args, "executionId"), sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
           - current_release_date: ${default(map.get(args, "currentReleaseDate"), "")}
           - current_source_sha256: ${default(map.get(args, "currentSourceSha256"), "")}
@@ -72,6 +75,18 @@ main:
               reason: UNEXPECTED_METADATA_CHANGE_EVIDENCE
               cloudBuildStarted: false
               activePointerWrites: 0
+
+    - route_discovery:
+        switch:
+          - condition: ${source_archive_key != "" and source_archive_sha256 != ""}
+            next: archive_discovery_bypass
+        next: discover_catalog
+
+    # A verified archive already carries everything the catalogue call would provide.
+    - archive_discovery_bypass:
+        assign:
+          - metadata_checksum: ${source_archive_sha256}
+        next: read_previous_state
 
     - discover_catalog:
         try:
@@ -471,7 +486,7 @@ main:
               schemaVersion: "valuepilot-argentina-workflow-discovery-v1"
               metadataChecksum: ${metadata_checksum}
               observedAt: ${args.observedAt}
-              datasetId: ${catalog_response.body.result.id}
+              datasetId: ${dataset_id}
               buildId: ${release_build.metadata.build.id}
               candidateReleaseId: ${map.get(worker_summary, "releaseId")}
               sourceArchiveSha256: ${source_archive_sha256}
