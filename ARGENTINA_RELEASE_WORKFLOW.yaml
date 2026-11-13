@@ -407,10 +407,10 @@ main:
                 diskSizeGb: "200"
                 logging: CLOUD_LOGGING_ONLY
                 requestedVerifyOption: VERIFIED
-              timeout: "21600s"
+              timeout: "43200s"
               serviceAccount: ${"projects/" + project_id + "/serviceAccounts/" + args.builderServiceAccount}
             connector_params:
-              timeout: 21600
+              timeout: 43200
               polling_policy:
                 initial_delay: 5
                 multiplier: 1.5
