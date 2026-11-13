@@ -24,6 +24,7 @@ jobs:
   retry:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: argentina-production
     env:
       GH_TOKEN: ${{ github.token }}
       ACQUIRE_WORKFLOW: acquire-argentina-sepa-windscribe.yml
