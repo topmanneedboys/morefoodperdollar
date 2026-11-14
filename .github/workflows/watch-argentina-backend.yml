@@ -44,6 +44,7 @@ jobs:
           body='{"query":"tomate","limit":1}'
           failed=""
           down=""
+          route=""
           for pair in "us:$US_URL" "sa:$SA_URL"; do
             name="${pair%%:*}"; url="${pair#*:}"
             code="$(curl -s -o /tmp/r.json -w '%{http_code}' --max-time 40 \
@@ -53,7 +54,7 @@ jobs:
             case "$code" in
               200) verdict="serving" ;;
               401|403) verdict="alive-auth-required" ;;
-              404) verdict="route-missing" ;;
+              404) verdict="route-missing"; route="$route $name:$code" ;;
               000|5*) verdict="down"; down="$down $name:$code" ;;
               *) verdict="unexpected" ;;
             esac
@@ -63,6 +64,7 @@ jobs:
           done
           echo "failed=$failed" >> "$GITHUB_OUTPUT"
           echo "down=${down# }" >> "$GITHUB_OUTPUT"
+          echo "route=${route# }" >> "$GITHUB_OUTPUT"
           echo "flag=${AUTO_FLAG:-unset}" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether to self-heal
@@ -89,7 +91,7 @@ jobs:
             || echo "::warning::could not dispatch acquisition (needs actions:write and the workflow on this branch)"
 
       - name: Open one issue per day
-        if: steps.probe.outputs.failed != ''
+        if: steps.probe.outputs.down != '' || steps.probe.outputs.route != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -154,6 +156,8 @@ jobs:
             echo "- us: ${{ steps.probe.outputs.us }}"
             echo "- sa: ${{ steps.probe.outputs.sa }}"
             echo "- failed: ${{ steps.probe.outputs.failed || 'none' }}"
+            echo "- real outage: ${{ steps.probe.outputs.down || 'none' }}"
+            echo "- route missing: ${{ steps.probe.outputs.route || 'none' }}"
             echo "- automation flag: ${{ steps.probe.outputs.flag }}"
             echo "- self-heal dispatched: ${{ steps.heal.outputs.dispatch || 'no' }}"
           } >> "$GITHUB_STEP_SUMMARY"
