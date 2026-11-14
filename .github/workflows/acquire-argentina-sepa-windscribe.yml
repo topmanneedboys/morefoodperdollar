@@ -1001,6 +1001,17 @@ jobs:
         if: steps.reconcile.outputs.status == 'SHADOW_FAILED'
         shell: bash
         run: |
+          set -uo pipefail
+          active="$(python -c 'import json,os; p=os.path.join(os.environ.get("RUNNER_TEMP","/tmp"),"valuepilot-reconcile-active.json"); print(json.load(open(p,encoding="utf-8")).get("releaseDate") or "" if os.path.isfile(p) else "")' 2>/dev/null || echo "")"
+          candidate="${{ steps.state.outputs.candidate_release }}"
+          echo "active release date: ${active:-unknown}; failed candidate: ${candidate:-unknown}"
+          if [ -n "$active" ] && [ -n "$candidate" ]; then
+            cand_date="$(printf '%s' "$candidate" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)"
+            if [ -n "$cand_date" ] && [ "$active" \> "$cand_date" ]; then
+              echo "::notice::Failed candidate ${cand_date} is older than the active release ${active}; nothing to alert."
+              exit 0
+            fi
+          fi
           echo "::error::Argentina SHADOW execution failed closed: ${{ steps.reconcile.outputs.reason }}"
           exit 1
 
