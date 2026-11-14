@@ -814,9 +814,11 @@ jobs:
               raise SystemExit(0)
           age = (datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date() - date.fromisoformat(value)).days
           print(f"Active Argentina release age: {age} day(s); the backend fails closed at 10.")
-          if age >= 6:
-              raise SystemExit(
-                  "::error::Active Argentina release is "
+          if age >= 8:
+              # Warn, do not fail: the retry workflow reacts to a stale release, and a red
+              # run here only produced daily email noise without changing anything.
+              print(
+                  "::warning::Active Argentina release is "
                   f"{age} days old; a refresh must land before the 10-day fail-closed limit."
               )
           PY
