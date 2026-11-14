@@ -1,0 +1,289 @@
+name: Promote archived Argentina release
+
+# Stateless hourly promotion gate.
+#
+# The daily pipeline archives an immutable, verified release and starts a
+# SHADOW build.  This workflow owns the only production mutation: when the
+# archive holds a complete release whose source date is newer than
+# control/active.json, tools.argentina_archived_release_promotion copies the
+# immutable objects, CAS-updates both regional pointers, updates the regional
+# Cloud Run services, runs authenticated smoke checks, and rolls back with the
+# exact prior pointers on any failure.  When no newer archived release exists
+# the run is a clean no-op.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Hourly, offset from the daily acquisition schedule.
+    - cron: '15 * * * *'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: valuepilot-argentina-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: argentina-production
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
+      ACTIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ACTIVE_BUCKET }}
+      ARCHIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ARCHIVE_BUCKET }}
+      CONTROL_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_CONTROL_BUCKET }}
+      SA_ACTIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_SA_ACTIVE_BUCKET || 'valuepilot-argentina-runtime-southamerica-east1' }}
+      US_BACKEND_URL: ${{ vars.VALUEPILOT_ARGENTINA_US_BACKEND_URL || 'https://valuepilot-argentina-us-east4-m72bv57hrq-uk.a.run.app' }}
+      SA_BACKEND_URL: ${{ vars.VALUEPILOT_ARGENTINA_SA_BACKEND_URL || 'https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app' }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+
+    steps:
+      - name: Checkout exact repository revision
+        uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install bounded promotion dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+
+      - name: Authenticate archive and runtime reads with GitHub OIDC
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          version: '>= 520.0.0'
+
+      - id: current
+        name: Read checksum-verified active release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          identity="${RUNNER_TEMP}/valuepilot-argentina-current.json"
+          python -m tools.read_argentina_active_source_identity \
+            --active-bucket "${ACTIVE_BUCKET}" \
+            --active-project "${GCP_PROJECT_ID}" \
+            --output "${identity}"
+          active_release="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["activeReleaseId"])' "${identity}")"
+          active_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["releaseDate"])' "${identity}")"
+          echo "active_release=${active_release}" >> "${GITHUB_OUTPUT}"
+          echo "active_date=${active_date}" >> "${GITHUB_OUTPUT}"
+          echo "identity_path=${identity}" >> "${GITHUB_OUTPUT}"
+          echo "Active release: ${active_release} (source date ${active_date})"
+
+      - id: select
+        name: Select the newest complete archived release newer than the active release
+        shell: bash
+        env:
+          ACTIVE_IDENTITY: ${{ steps.current.outputs.identity_path }}
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="${PWD}${PYTHONPATH:+:${PYTHONPATH}}"
+          python - "${ACTIVE_IDENTITY}" <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          from backend.object_store import GCSObjectStore, ObjectStoreError
+          from tools.argentina_archived_release_promotion import PromotionError, load_archived_manifest
+
+          archive_bucket = os.environ["ARCHIVE_BUCKET"]
+          project = os.environ["GCP_PROJECT_ID"]
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              identity = json.load(handle)
+          active_release = identity["activeReleaseId"]
+          active_date = identity["releaseDate"]
+          print(f"active release: {active_release} (source date {active_date})")
+
+          listing = subprocess.run(
+              ["gcloud", "storage", "ls", f"gs://{archive_bucket}/releases/"],
+              capture_output=True,
+              text=True,
+          )
+          if listing.returncode != 0:
+              print(listing.stderr, file=sys.stderr)
+              raise SystemExit("archive release listing failed")
+          prefix = re.compile(r"/releases/([A-Za-z0-9._-]{1,160})/$")
+          dated = re.compile(r"argentina-sepa-(\d{4}-\d{2}-\d{2})-[0-9a-f]{16}-routing-v1-search-v2\Z")
+          candidates = []
+          for line in listing.stdout.splitlines():
+              match = prefix.search(line.strip())
+              if match is None:
+                  continue
+              release_id = match.group(1)
+              release_match = dated.fullmatch(release_id)
+              if release_match is None:
+                  continue
+              release_date = release_match.group(1)
+              if release_date <= active_date:
+                  continue
+              candidates.append((release_date, release_id))
+          candidates.sort(reverse=True)
+          print(f"newer archived release candidates: {len(candidates)}")
+
+          archive = GCSObjectStore(bucket=archive_bucket, project=project)
+          selected = {"releaseId": "", "releaseDate": "", "sourceSha256": ""}
+          for release_date, release_id in candidates:
+              try:
+                  raw = archive.get(f"releases/{release_id}/manifest.json")
+              except ObjectStoreError:
+                  print(f"skip {release_id}: archived manifest is not published yet")
+                  continue
+              try:
+                  manifest = json.loads(raw)
+              except (UnicodeDecodeError, json.JSONDecodeError):
+                  print(f"skip {release_id}: archived manifest is invalid")
+                  continue
+              source = manifest.get("source") if isinstance(manifest, dict) else None
+              if not isinstance(source, dict):
+                  print(f"skip {release_id}: archived manifest has no source identity")
+                  continue
+              if source.get("releaseDate") != release_date:
+                  print(f"skip {release_id}: manifest source date does not match the release id")
+                  continue
+              source_sha256 = source.get("sha256")
+              if not isinstance(source_sha256, str):
+                  print(f"skip {release_id}: manifest source hash is missing")
+                  continue
+              try:
+                  load_archived_manifest(
+                      archive,
+                      release_id=release_id,
+                      expected_release_date=release_date,
+                      expected_source_sha256=source_sha256,
+                  )
+              except PromotionError as exc:
+                  print(f"skip {release_id}: {exc}")
+                  continue
+              selected = {
+                  "releaseId": release_id,
+                  "releaseDate": release_date,
+                  "sourceSha256": source_sha256,
+              }
+              break
+          if not selected["releaseId"]:
+              print("No complete archived release is newer than the active release; nothing to promote.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"release_id={selected['releaseId']}\n")
+              handle.write(f"release_date={selected['releaseDate']}\n")
+              handle.write(f"source_sha256={selected['sourceSha256']}\n")
+          print(json.dumps(selected, sort_keys=True))
+          PY
+
+      - name: Finish cleanly when no newer release is archived
+        if: steps.select.outputs.release_id == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "No archived release is newer than the active release; no pointer, service, or smoke action is required."
+          {
+            echo "### Argentina stateless promotion"
+            echo "- Active release: ${{ steps.current.outputs.active_release }}"
+            echo "- Active source date: ${{ steps.current.outputs.active_date }}"
+            echo "- Candidate: NONE"
+            echo "- Pointer writes: 0"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - id: smoke-us-auth
+        name: Authenticate US regional smoke checks
+        if: steps.select.outputs.release_id != ''
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ env.US_BACKEND_URL }}
+          id_token_include_email: true
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - id: smoke-sa-auth
+        name: Authenticate SA regional smoke checks
+        if: steps.select.outputs.release_id != ''
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ env.SA_BACKEND_URL }}
+          id_token_include_email: true
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - id: promote
+        name: Promote the verified archived release with CAS, smoke checks, and rollback
+        if: steps.select.outputs.release_id != ''
+        shell: bash
+        env:
+          CANDIDATE_RELEASE: ${{ steps.select.outputs.release_id }}
+          CANDIDATE_DATE: ${{ steps.select.outputs.release_date }}
+          CANDIDATE_SHA256: ${{ steps.select.outputs.source_sha256 }}
+          EXPECTED_CURRENT_RELEASE: ${{ steps.current.outputs.active_release }}
+          VALUEPILOT_SMOKE_ID_TOKEN_US: ${{ steps.smoke-us-auth.outputs.id_token }}
+          VALUEPILOT_SMOKE_ID_TOKEN_SA: ${{ steps.smoke-sa-auth.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          python -m tools.argentina_archived_release_promotion \
+            --release-id "${CANDIDATE_RELEASE}" \
+            --expected-current-release-id "${EXPECTED_CURRENT_RELEASE}" \
+            --release-date "${CANDIDATE_DATE}" \
+            --source-sha256 "${CANDIDATE_SHA256}" \
+            --archive-bucket "${ARCHIVE_BUCKET}" \
+            --us-bucket "${ACTIVE_BUCKET}" \
+            --sa-bucket "${SA_ACTIVE_BUCKET}" \
+            --project "${GCP_PROJECT_ID}" \
+            --smoke-url "${US_BACKEND_URL}" \
+            --smoke-url "${SA_BACKEND_URL}" \
+            --smoke-token-env VALUEPILOT_SMOKE_ID_TOKEN_US \
+            --smoke-token-env VALUEPILOT_SMOKE_ID_TOKEN_SA \
+            --service-update "valuepilot-argentina-us-east4:us-east4" \
+            --service-update "valuepilot-argentina-sa-east1:southamerica-east1" \
+            --control-bucket "${CONTROL_BUCKET}" \
+            --output "${RUNNER_TEMP}/valuepilot-promotion.json"
+          promotion_status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-promotion.json")"
+          echo "Automated promotion: ${promotion_status} (${CANDIDATE_RELEASE})"
+
+      - name: Summarize the promotion decision
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### Argentina stateless promotion"
+            echo "- Active release: ${{ steps.current.outputs.active_release }}"
+            echo "- Candidate: ${{ steps.select.outputs.release_id || 'NONE' }}"
+            echo "- Candidate source date: ${{ steps.select.outputs.release_date || 'NONE' }}"
+            echo "- Regions: us-east4 and southamerica-east1"
+            echo "- Activation: CAS pointers followed by authenticated ready/status/search smoke"
+            echo "- Rollback: exact prior pointer bytes and service revisions on failure"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Remove runner-local credential material
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          credential_path="${GOOGLE_GHA_CREDS_PATH:-${GOOGLE_APPLICATION_CREDENTIALS:-}}"
+          if [[ -n "${credential_path}" && -f "${credential_path}" ]]; then
+            shred -u "${credential_path}" >/dev/null 2>&1 || rm -f "${credential_path}"
+          fi
+          rm -f gha-creds-*.json
