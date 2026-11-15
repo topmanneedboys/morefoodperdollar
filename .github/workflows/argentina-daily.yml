@@ -411,9 +411,57 @@ jobs:
           service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
           create_credentials_file: true
 
+      - id: archive-check
+        name: Verify whether this exact source is already archived
+        if: steps.direct.outputs.status == 'HANDOFF_READY' || steps.acquire.outputs.status == 'HANDOFF_READY'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="${PWD}${PYTHONPATH:+:${PYTHONPATH}}"
+          python - "${HANDOFF_REPORT}" <<'PY'
+          import json
+          import os
+          import sys
+
+          from backend.object_store import GCSObjectStore, ObjectStoreError
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              report = json.load(handle)
+          archive = report["archive"]
+          handoff = report["handoff"]
+          key = archive["key"]
+          sha256 = archive["sha256"]
+          size = archive["bytes"]
+          if handoff.get("sourceArchiveKey") != key or handoff.get("sourceArchiveSha256") != sha256:
+              raise SystemExit("handoff and archive identities differ")
+
+          # The archive is immutable and the source manifest carries its first
+          # acquisition time, so an identical source must be verified and
+          # reused instead of rewritten under the same content-addressed key.
+          store = GCSObjectStore(bucket=os.environ["ARCHIVE_BUCKET"], project=os.environ["GCP_PROJECT_ID"])
+          reuse = False
+          try:
+              metadata = store.head(key)
+              manifest = json.loads(store.get(archive["manifestKey"]))
+              reuse = (
+                  metadata.size == size
+                  and (metadata.sha256 is None or metadata.sha256 == sha256)
+                  and manifest.get("sourceSha256") == sha256
+                  and manifest.get("archiveKey") == key
+                  and manifest.get("bytes") == size
+                  and manifest.get("rawProviderDataCommitted") is False
+                  and manifest.get("runtimePublicationAllowed") is False
+              )
+          except (ObjectStoreError, KeyError, TypeError, ValueError):
+              reuse = False
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"reuse={'true' if reuse else 'false'}\n")
+          print("Exact source already archived; reusing the immutable object." if reuse else "Exact source is not archived yet; publishing it now.")
+          PY
+
       - id: publish
         name: Publish exact verified source to private GCS archive
-        if: steps.direct.outputs.status == 'HANDOFF_READY' || steps.acquire.outputs.status == 'HANDOFF_READY'
+        if: (steps.direct.outputs.status == 'HANDOFF_READY' || steps.acquire.outputs.status == 'HANDOFF_READY') && steps.archive-check.outputs.reuse != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -440,8 +488,8 @@ jobs:
         run: |
           set -euo pipefail
           export EXECUTION_ID="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          export SOURCE_ARCHIVE_KEY="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveKey"])' "${PUBLISH_REPORT}")"
-          export SOURCE_ARCHIVE_SHA256="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveSha256"])' "${PUBLISH_REPORT}")"
+          export SOURCE_ARCHIVE_KEY="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["handoff"]["sourceArchiveKey"])' "${HANDOFF_REPORT}")"
+          export SOURCE_ARCHIVE_SHA256="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["handoff"]["sourceArchiveSha256"])' "${HANDOFF_REPORT}")"
           data="$(python - <<'PY'
           import json, os
           value = {
@@ -514,6 +562,7 @@ jobs:
             echo "- Offline discovery: ${{ steps.preflight.outputs.resource_name }}"
             echo "- Handoff (direct): ${{ steps.direct.outputs.status || 'NOT_RUN' }}"
             echo "- Handoff (tunnel): ${{ steps.acquire.outputs.status || 'NOT_RUN' }}"
+            echo "- Archive reused: ${{ steps.archive-check.outputs.reuse || 'false' }}"
             echo "- Archive key: ${{ steps.payload.outputs.source_archive_key || 'NONE' }}"
             echo "- SHADOW execution id: ${{ steps.payload.outputs.execution_id || 'NONE' }}"
             echo "- Promotion mode: SHADOW"
