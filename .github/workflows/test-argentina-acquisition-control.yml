@@ -5,6 +5,9 @@ on:
   push:
     paths:
       - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
+      - '.github/workflows/argentina-daily.yml'
+      - '.github/workflows/argentina-promote.yml'
+      - '.github/workflows/argentina-retry-acquisition.yml'
       - '.github/workflows/test-argentina-acquisition-control.yml'
       - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
