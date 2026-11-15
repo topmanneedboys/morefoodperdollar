@@ -7,9 +7,12 @@ name: Retry Argentina acquisition
 # This workflow re-dispatches the acquisition when the active release is older than two
 # days, and never stacks runs: it skips if an acquisition started in the last 45 minutes.
 
+# Retired: the control-state acquisition it re-dispatched is replaced by the
+# stateless argentina-daily.yml (one daily handoff) and argentina-promote.yml
+# (hourly promotion of any newer archived release). workflow_dispatch remains
+# for a manual retry of the retired path.
+
 on:
-  schedule:
-    - cron: '25 */2 * * *'      # every two hours, offset from the main schedule
   workflow_dispatch:
 
 permissions:
