@@ -12,13 +12,13 @@ BUILD_WORKFLOW = ROOT / ".github" / "workflows" / "build-valuepilot-android.yml"
 
 
 class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
-    def test_workflow_is_oidc_only_daily_scheduled_and_gated(self) -> None:
+    def test_workflow_is_oidc_only_manual_and_gated(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", text)
-        for cron in ("30 16 * * *", "30 18 * * *", "30 20 * * *", "30 23 * * *"):
-            self.assertIn(f"cron: '{cron}'", text)
-        self.assertNotIn("30 16,18,20 * * *", text)
-        self.assertIn("cron: '15 * * * *'", text)
+        # Scheduling moved to the stateless argentina-daily.yml and
+        # argentina-promote.yml workflows; this file is manual-only now.
+        self.assertIn("Scheduled acquisition is retired", text)
+        self.assertNotIn("\n  schedule:\n", text)
         self.assertIn("github.event.schedule != '15 * * * *'", text)
         self.assertIn("'30 23 * * *') check_phase=\"PRIMARY\"", text)
         self.assertIn("Fail loudly when the active release approaches the freshness limit", text)
@@ -31,6 +31,27 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertNotIn("credentials_json", text)
         self.assertNotIn("pull_request:", text)
         self.assertIn("cancel-in-progress: false", text)
+
+    def test_stateless_workflows_own_the_schedule(self) -> None:
+        workflows = ROOT / ".github" / "workflows"
+        daily = (workflows / "argentina-daily.yml").read_text(encoding="utf-8")
+        promote = (workflows / "argentina-promote.yml").read_text(encoding="utf-8")
+        retry = (workflows / "argentina-retry-acquisition.yml").read_text(encoding="utf-8")
+
+        self.assertIn("cron: '30 16 * * *'", daily)
+        self.assertIn("cron: '15 * * * *'", promote)
+        self.assertNotIn("cron:", retry)
+        # The daily pipeline is stateless: no reservation, journal, fingerprint
+        # or pending-pointer tooling may enter it.
+        self.assertNotIn("argentina_acquisition_schedule_control", daily)
+        self.assertIn("tools.argentina_release_acquisition_handoff", daily)
+        self.assertIn("tools.publish_argentina_source_handoff", daily)
+        self.assertIn('"promotionMode": "SHADOW"', daily)
+        # The promotion gate delegates to the archived-release controller.
+        self.assertIn("tools.argentina_archived_release_promotion", promote)
+        self.assertIn("--service-update", promote)
+        self.assertIn("--smoke-token-env", promote)
+
 
     def test_metadata_preflight_deduplicates_before_opening_windscribe(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
