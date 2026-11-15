@@ -23,24 +23,9 @@ on:
         required: false
         default: ""
         type: string
-  schedule:
-    # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
-    # Every day, including weekends. Every phase re-discovers authoritative metadata
-    # (DISCOVERY_PLUS_RECOVERY). 13:30 is the primary byte check, 15:30
-    # downloads only for changed metadata, and 17:30 permits one bounded late
-    # byte recheck after an unchanged-metadata primary result proved stale.
-    # Scheduled runs remain inert until ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
-    - cron: '30 16 * * *'
-    - cron: '30 18 * * *'
-    - cron: '30 20 * * *'
-    # Late catch-up byte check (20:30 ART). GitHub drops or delays scheduled
-    # events under load; this bounded attempt keeps a missed earlier phase from
-    # starving the active release. The preflight is idempotent, so a day that
-    # already archived, built or started a SHADOW build reuses that evidence.
-    - cron: '30 23 * * *'
-    # Builds can finish after the last source check or across midnight.
-    # This inexpensive control-only run never downloads or builds the catalog.
-    - cron: '15 * * * *'
+  # Scheduled acquisition is retired. The stateless argentina-daily.yml owns the
+  # daily handoff and argentina-promote.yml owns the hourly promotion gate.
+  # workflow_dispatch stays available for a manual, bounded recovery.
 
 permissions:
   contents: read
