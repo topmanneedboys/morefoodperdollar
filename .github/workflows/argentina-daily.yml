@@ -304,11 +304,19 @@ jobs:
           tunnel_up=0
           dns_backup="${RUNNER_TEMP}/valuepilot-resolv-before-tunnel.conf"
           sudo cp /etc/resolv.conf "${dns_backup}"
+          # wg-quick must own its config. A runner-owned 0600 file in
+          # RUNNER_TEMP can be unreadable to the elevated process (the
+          # 2026-11-16 fallback aborted with "Permission denied"), so install
+          # the validated config into the standard root-only location.
+          interface="vpwg"
+          sudo install -d -m 700 /etc/wireguard
+          sudo install -m 600 -o root -g root "${WG_CONFIG}" "/etc/wireguard/${interface}.conf"
           cleanup_tunnel() {
             set +e
             if [[ "${tunnel_up}" == "1" ]]; then
-              sudo wg-quick down "${WG_CONFIG}" >/dev/null 2>&1 || true
+              sudo wg-quick down "${interface}" >/dev/null 2>&1 || true
             fi
+            sudo rm -f "/etc/wireguard/${interface}.conf"
             if [[ -f "${dns_backup}" ]]; then
               sudo cp "${dns_backup}" /etc/resolv.conf
               sudo rm -f "${dns_backup}"
@@ -317,10 +325,9 @@ jobs:
           }
           trap cleanup_tunnel EXIT INT TERM
 
-          sudo wg-quick up "${WG_CONFIG}" >/dev/null
+          sudo wg-quick up "${interface}" >/dev/null
           tunnel_up=1
 
-          interface="$(basename "${WG_CONFIG}" .conf)"
           # Hosted-runner stub/provider DNS can become unreachable after the
           # full-tunnel switch. Public DNS must itself route through WireGuard;
           # a missing route stops acquisition, never falls back outside it.
