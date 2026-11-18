@@ -325,7 +325,20 @@ jobs:
           }
           trap cleanup_tunnel EXIT INT TERM
 
-          sudo wg-quick up "${interface}" >/dev/null
+          tunnel_ready=0
+          for attempt in 1 2 3; do
+            if sudo wg-quick up "${interface}" >/dev/null; then
+              tunnel_ready=1
+              break
+            fi
+            echo "WireGuard tunnel attempt ${attempt} failed; retrying after a bounded delay."
+            sudo wg-quick down "${interface}" >/dev/null 2>&1 || true
+            sleep $((attempt * 5))
+          done
+          if [[ "${tunnel_ready}" != "1" ]]; then
+            echo "::error::Windscribe WireGuard tunnel could not be established after bounded retries."
+            exit 2
+          fi
           tunnel_up=1
 
           # Hosted-runner stub/provider DNS can become unreachable after the
