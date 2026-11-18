@@ -1226,6 +1226,123 @@ SUBCATEGORY_RULES = tuple(
     for rule in SUBCATEGORY_RULES
 )
 
+# Fifth subcategory batch (2026-11-18): broaden the tree toward the 200-300
+# target across beverages, care, health, home, clothing, electronics and tools.
+SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
+    SubcategoryRule("isotonic", "beverages", "Isotónicas", "Sports drinks", (
+        "isotonica", "isotonicas", "deportiva", "gatorade", "powerade",
+    ), priority=25),
+    SubcategoryRule("smoothies", "beverages", "Licuados", "Smoothies", (
+        "smoothie", "smoothies", "licuado", "licuados",
+    ), priority=20),
+    SubcategoryRule("plant_milk", "dairy", "Bebidas vegetales", "Plant milk", (
+        "leche de almendras", "leche de soja", "leche de coco", "leche de avena",
+        "bebida vegetal", "bebida de almendras", "bebida de soja",
+    ), priority=25),
+    SubcategoryRule("yeast", "staples", "Levaduras", "Yeast", (
+        "levadura", "levaduras", "leudante",
+    ), priority=20),
+    SubcategoryRule("breadcrumbs", "staples", "Rebozadores", "Breadcrumbs", (
+        "rebozador", "rebozadores", "pan rallado",
+    ), priority=20),
+    SubcategoryRule("broth", "staples", "Caldos", "Broth", (
+        "caldo", "caldos", "caldo de gallina", "caldo de carne", "caldo de verduras",
+    ), priority=20),
+    SubcategoryRule("canned", "staples", "Conservas", "Canned goods", (
+        "conserva", "conservas", "lata", "latas",
+    ), priority=20),
+    SubcategoryRule("cereal", "snacks_sweets", "Cereales", "Cereal", (
+        "cereal", "cereales", "copos", "granola", "avena instantanea",
+    ), priority=20),
+    SubcategoryRule("ice_cream", "snacks_sweets", "Helados", "Ice cream", (
+        "helado", "helados", "paleta", "paletas", "sundae",
+    ), priority=20),
+    SubcategoryRule("flan", "snacks_sweets", "Postres", "Desserts", (
+        "flan", "flanes", "postre", "postres", "gelatina",
+    ), priority=20),
+    SubcategoryRule("air_freshener", "household_cleaning", "Aromatizantes", "Air fresheners", (
+        "aromatizante", "aromatizantes", "difusor", "sahumerio", "ambiental",
+    ), priority=20),
+    SubcategoryRule("pest_control", "household_cleaning", "Control de plagas", "Pest control", (
+        "insecticida", "insecticidas", "veneno", "raticida", "cucaracha",
+        "mosca", "trampa para",
+    ), priority=20),
+    SubcategoryRule("laundry_care", "household_cleaning", "Cuidado de ropa", "Laundry care", (
+        "suavizante", "quitamanchas", "jabon para ropa", "perlas",
+        "jabon liquido para ropa",
+    ), priority=20),
+    SubcategoryRule("skin_care", "personal_care", "Cuidado de la piel", "Skin care", (
+        "crema facial", "crema corporal", "locion", "serum", "hidratante",
+        "crema de manos",
+    ), priority=25),
+    SubcategoryRule("sun_care", "personal_care", "Protector solar", "Sun care", (
+        "protector solar", "filtro solar", "bloqueador", "fps", "bronceador",
+    ), priority=25),
+    SubcategoryRule("hair_care", "personal_care", "Cuidado del cabello", "Hair care", (
+        "mascara capilar", "tratamiento capilar", "ampolla capilar",
+        "crema para peinar",
+    ), priority=25),
+    SubcategoryRule("baby_care", "baby_pet", "Cuidado del bebé", "Baby care", (
+        "shampoo bebe", "crema bebe", "colonia bebe", "aceite bebe",
+        "toallitas bebe",
+    ), priority=20),
+    SubcategoryRule("digestive", "health_supplements", "Digestivos", "Digestive", (
+        "antiacido", "antiacidos", "digestivo", "omeprazol", "bicarbonato",
+    ), priority=20),
+    SubcategoryRule("allergy", "health_supplements", "Alergias", "Allergy", (
+        "antialergico", "antialergicos", "loratadina", "cetirizina",
+    ), priority=20),
+    SubcategoryRule("cough", "health_supplements", "Tos y garganta", "Cough and throat", (
+        "jarabe", "jarabes", "tos", "antitusivo", "pastillas para la garganta",
+    ), priority=20),
+    SubcategoryRule("furniture", "home_goods", "Muebles", "Furniture", (
+        "silla", "sillas", "mesa", "mesas", "mueble", "muebles", "estante",
+        "ropero", "placard",
+    ), priority=20),
+    SubcategoryRule("lighting", "home_goods", "Iluminación", "Lighting", (
+        "lampara", "lamparas", "foco", "focos", "velador", "luz led",
+    ), priority=20),
+    SubcategoryRule("dresses", "clothing", "Vestidos", "Dresses", (
+        "vestido", "vestidos",
+    ), priority=25),
+    SubcategoryRule("shirts", "clothing", "Camisas", "Shirts", (
+        "camisa", "camisas", "blusa", "blusas",
+    ), priority=25),
+    SubcategoryRule("jackets", "clothing", "Camperas", "Jackets", (
+        "campera", "camperas", "abrigo", "abrigos", "chaleco", "parka",
+    ), priority=25),
+    SubcategoryRule("shoes", "clothing", "Zapatos", "Shoes", (
+        "zapato", "zapatos", "zapatilla", "zapatillas", "sandalia", "sandalias",
+    ), priority=25),
+    SubcategoryRule("slippers", "clothing", "Pantuflas", "Slippers", (
+        "pantufla", "pantuflas", "chinela", "chinelas",
+    ), priority=25),
+    SubcategoryRule("arts_crafts", "toys_games", "Arte y manualidades", "Arts and crafts", (
+        "plastilina", "masa", "tempera", "temperas", "pincel", "glitter",
+        "manualidad", "manualidades",
+    ), priority=20),
+    SubcategoryRule("puzzles", "toys_games", "Rompecabezas", "Puzzles", (
+        "rompecabezas", "puzzle", "puzzles",
+    ), priority=25),
+    SubcategoryRule("refrigeration", "electronics", "Heladeras", "Refrigeration", (
+        "heladera", "heladeras", "freezer", "congelador", "exhibidora",
+    ), priority=25),
+    SubcategoryRule("laundry_appliance", "electronics", "Lavarropas", "Laundry appliances", (
+        "lavarropas", "secarropas", "lavasecarropas",
+    ), priority=25),
+    SubcategoryRule("vacuum", "electronics", "Aspiradoras", "Vacuums", (
+        "aspiradora", "aspiradoras", "aspirador", "robot aspiradora",
+    ), priority=25),
+    SubcategoryRule("garden_tools", "tools_hardware", "Jardín", "Garden tools", (
+        "pala", "rastrillo", "manguera", "tijera de podar", "azada",
+        "semilla", "tierra",
+    ), priority=20),
+    SubcategoryRule("paint", "tools_hardware", "Pintura", "Paint", (
+        "pintura", "latex", "esmalte sintetico", "barniz", "rodillo",
+    ), priority=20),
+)
+
+
 
 
 
