@@ -82,6 +82,40 @@ MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
 MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
 MAX_SMALL_CATALOG_FALLBACK_RECORDS = 2_048
 
+# Provider reference-price units, as observed in the SEPA columns
+# ``productos_unidad_medida_referencia``.  Only these canonical bases may be
+# displayed; any other raw unit leaves the reference price unknown.
+_REFERENCE_UNIT_LABELS = {
+    "l": "l",
+    "lt": "l",
+    "lts": "l",
+    "ltr": "l",
+    "litro": "l",
+    "litros": "l",
+    "ml": "ml",
+    "mls": "ml",
+    "cc": "ml",
+    "cm3": "ml",
+    "cmq": "ml",
+    "kg": "kg",
+    "kgs": "kg",
+    "kilo": "kg",
+    "kilos": "kg",
+    "kilogramo": "kg",
+    "kilogramos": "kg",
+    "g": "g",
+    "gr": "g",
+    "grs": "g",
+    "grm": "g",
+    "gramo": "g",
+    "gramos": "g",
+    "un": "count",
+    "uni": "count",
+    "unidad": "count",
+    "unidades": "count",
+    "u": "count",
+}
+
 
 class BackendQueryError(ValueError):
     pass
@@ -906,6 +940,43 @@ class ArgentinaBackendReader:
             return False
         return observed.dimension == expected.dimension and observed.base_amount == expected.base_amount
 
+    @staticmethod
+    def _reference_unit_price(reference: Any) -> dict[str, str] | None:
+        """Project the provider's own reference price without inventing a basis.
+
+        SEPA carries ``productos_precio_referencia`` together with its
+        reference quantity and unit.  That is a provider-stated unit price, so
+        it is projected only when the amount and a canonical basis are both
+        valid, and it stays labelled as a reference rather than a computed
+        current-offer price.
+        """
+
+        if not isinstance(reference, Mapping):
+            return None
+        amount = reference.get("amount")
+        currency = reference.get("currency")
+        raw_quantity = reference.get("quantityRaw")
+        raw_unit = reference.get("unitRaw")
+        if not isinstance(amount, str) or not amount or not isinstance(currency, str) or not currency:
+            return None
+        if not isinstance(raw_quantity, str) or not isinstance(raw_unit, str):
+            return None
+        basis_unit = _REFERENCE_UNIT_LABELS.get(raw_unit.strip().casefold())
+        if basis_unit is None:
+            return None
+        try:
+            quantity = Decimal(raw_quantity.strip().replace(",", "."))
+        except (ArithmeticError, ValueError):
+            return None
+        if quantity <= 0:
+            return None
+        return {
+            "amount": amount,
+            "currency": currency,
+            "basis": f"{decimal_text(quantity)} {basis_unit}",
+            "source": "PROVIDER_REFERENCE",
+        }
+
     @classmethod
     def _public_search_offer(
         cls,
@@ -941,6 +1012,7 @@ class ArgentinaBackendReader:
             "quantity": product.get("quantity"),
             "quantityStatus": product.get("quantityStatus"),
             "unitPrice": cls._search_unit_price(product, offer),
+            "referenceUnitPrice": cls._reference_unit_price(offer.get("referencePrice")),
             "releaseDate": offer.get("releaseDate"),
             "freshnessStatus": offer.get("freshnessStatus"),
             "availability": "UNKNOWN",

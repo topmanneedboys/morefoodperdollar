@@ -295,6 +295,69 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertEqual(projected["storeAddress"], {"street": "Av. Corrientes"})
 
+    def test_public_search_offer_projects_provider_reference_unit_price(self) -> None:
+        offer = {
+            "offerKey": "offer-1",
+            "productEvidenceKey": "product-1",
+            "storeKey": "store-1",
+            "listPrice": {"amount": "9055", "currency": "ARS"},
+            "referencePrice": {
+                "amount": "36220",
+                "currency": "ARS",
+                "quantityRaw": "1",
+                "unitRaw": "ltr",
+                "semanticRole": "reference_price_not_current_offer",
+            },
+            "releaseDate": "2026-11-15",
+            "freshnessStatus": "FRESH",
+            "promotions": [],
+        }
+        product = {
+            "productEvidenceKey": "product-1",
+            "quantity": None,
+            "quantityStatus": "UNKNOWN",
+        }
+
+        projected = ArgentinaBackendReader._public_search_offer(offer, product)
+
+        self.assertIsNone(projected["unitPrice"])
+        self.assertEqual(
+            projected["referenceUnitPrice"],
+            {
+                "amount": "36220",
+                "currency": "ARS",
+                "basis": "1 l",
+                "source": "PROVIDER_REFERENCE",
+            },
+        )
+
+    def test_public_search_offer_rejects_unmapped_reference_units(self) -> None:
+        offer = {
+            "offerKey": "offer-1",
+            "productEvidenceKey": "product-1",
+            "storeKey": "store-1",
+            "listPrice": {"amount": "100", "currency": "ARS"},
+            "referencePrice": {
+                "amount": "500",
+                "currency": "ARS",
+                "quantityRaw": "1",
+                "unitRaw": "furlong",
+                "semanticRole": "reference_price_not_current_offer",
+            },
+            "releaseDate": "2026-11-15",
+            "freshnessStatus": "FRESH",
+            "promotions": [],
+        }
+        product = {
+            "productEvidenceKey": "product-1",
+            "quantity": None,
+            "quantityStatus": "UNKNOWN",
+        }
+
+        projected = ArgentinaBackendReader._public_search_offer(offer, product)
+
+        self.assertIsNone(projected["referenceUnitPrice"])
+
     def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())
