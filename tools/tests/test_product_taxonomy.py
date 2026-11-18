@@ -235,6 +235,42 @@ class ProductTaxonomyTests(unittest.TestCase):
                     "a subcategory was emitted under an unobserved department",
                 )
 
+    def test_category_counts_summarize_the_observed_tree(self) -> None:
+        index = ProductTaxonomyIndex({
+            "a": {
+                "taxonomy": {
+                    "primaryDepartment": "dairy",
+                    "departmentCandidates": [{"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}],
+                    "primarySubcategory": "milk",
+                    "subcategoryCandidates": [{"key": "milk", "labelEs": "Leches", "labelEn": "Milk"}],
+                }
+            },
+            "b": {
+                "taxonomy": {
+                    "primaryDepartment": "dairy",
+                    "departmentCandidates": [{"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}],
+                    "primarySubcategory": "eggs",
+                    "subcategoryCandidates": [{"key": "eggs", "labelEs": "Huevos", "labelEn": "Eggs"}],
+                }
+            },
+            "c": {
+                "taxonomy": {
+                    "coverageStatus": "REVIEW_REQUIRED",
+                    "departmentCandidates": [],
+                    "subcategoryCandidates": [],
+                }
+            },
+        })
+
+        counts = index.category_counts()
+
+        self.assertEqual(counts["productsWithDepartment"], 2)
+        self.assertEqual(counts["productsWithSubcategory"], 2)
+        self.assertEqual(counts["departments"][0]["key"], "dairy")
+        self.assertEqual(counts["departments"][0]["count"], 2)
+        subcategory_counts = {item["key"]: item["count"] for item in counts["subcategories"]}
+        self.assertEqual(subcategory_counts, {"milk": 1, "eggs": 1})
+
 
 if __name__ == "__main__":
     unittest.main()

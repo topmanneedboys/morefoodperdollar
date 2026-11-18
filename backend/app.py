@@ -158,6 +158,15 @@ def create_app(service: BackendService | None = None):
     async def status():
         return runtime_service.status()
 
+    @app.get("/v1/categories")
+    async def categories():
+        try:
+            return runtime_service.categories()
+        except Exception as exc:  # noqa: BLE001 - taxonomy sidecar is optional
+            from fastapi import HTTPException
+            status_code = 503 if str(exc) == "CATEGORY_TAXONOMY_UNAVAILABLE" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
     @app.post("/v1/search")
     async def search(payload: SearchRequest, request: Request):
         try:
