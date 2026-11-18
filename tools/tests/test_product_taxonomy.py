@@ -217,7 +217,7 @@ class ProductTaxonomyTests(unittest.TestCase):
 
     def test_subcategory_tree_emits_children_only_under_observed_parents(self) -> None:
         cases = {
-            "Naranja Fresca 1 kg": ("fruit", "fresh_produce"),
+            "Naranja Fresca 1 kg": ("citrus", "fresh_produce"),
             "Vodka 700 ml": ("spirits", "beverages"),
             "Arroz Largo Fino 1 kg": ("rice", "staples"),
             "Queso Cremoso 500 g": ("cheese", "dairy"),

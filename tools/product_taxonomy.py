@@ -697,6 +697,12 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
     "dairy": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS["dairy"] + (
         "pascua", "chocolate", "juguete", "sorpresa",
     ),
+    "fresh_produce": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("fresh_produce", ()) + (
+        "detergente", "limpiador", "lavandina", "desinfectante", "jabon",
+        "shampoo", "acondicionador", "crema", "gel", "aromatizante",
+        "lavavajillas", "suavizante", "quitamanchas", "limpia", "piso",
+        "ropa", "bano",
+    ),
 })
 
 
@@ -1128,6 +1134,99 @@ SUBCATEGORY_RULES = tuple(
     replace(rule, terms=rule.terms + _SUBCATEGORY_TERM_EXTENSIONS.get(rule.key, ()))
     for rule in SUBCATEGORY_RULES
 )
+
+# Fourth subcategory batch (2026-11-18): finer eBay-like children. Specific
+# children carry a higher priority than their broad sibling so citrus wins
+# over fruit when both match.
+SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
+    SubcategoryRule("citrus", "fresh_produce", "Cítricos", "Citrus", (
+        "naranja", "mandarina", "limon", "pomelo", "bergamota",
+    ), priority=30),
+    SubcategoryRule("berries", "fresh_produce", "Frutas del bosque", "Berries", (
+        "frutilla", "arandano", "arandanos", "cereza", "cerezas", "frambuesa",
+        "mora", "moras", "casiss",
+    ), priority=30),
+    SubcategoryRule("tropical", "fresh_produce", "Frutas tropicales", "Tropical fruit", (
+        "banana", "anana", "mango", "palta", "papaya", "kiwi", "maracuya",
+        "pina", "coco",
+    ), priority=30),
+    SubcategoryRule("leafy_greens", "fresh_produce", "Hojas verdes", "Leafy greens", (
+        "lechuga", "acelga", "espinaca", "rucula", "radicheta", "berro",
+        "escarola",
+    ), priority=30),
+    SubcategoryRule("root_vegetables", "fresh_produce", "Raíces y tubérculos", "Roots and tubers", (
+        "papa", "batata", "zanahoria", "remolacha", "cebolla", "ajo",
+        "nabo", "rabanito",
+    ), priority=30),
+    SubcategoryRule("cold_cuts", "meat_seafood", "Fiambres", "Cold cuts", (
+        "jamon", "salame", "mortadela", "panceta", "salchichon", "bondiola",
+        "lomito", "pastron",
+    ), priority=25),
+    SubcategoryRule("energy", "beverages", "Energizantes", "Energy drinks", (
+        "energizante", "energizantes", "energy drink", "red bull", "monster",
+        "speed",
+    ), priority=25),
+    SubcategoryRule("sweetener", "condiments", "Endulzantes", "Sweeteners", (
+        "edulcorante", "edulcorantes", "stevia", "sucralosa", "aspartame",
+        "sacarina",
+    ), priority=25),
+    SubcategoryRule("underwear", "clothing", "Ropa interior", "Underwear", (
+        "bombacha", "bombachas", "vedetina", "vedetinas", "calzoncillo",
+        "calzoncillos", "corpino", "corpiño", "brasier", "slip",
+    ), priority=20),
+    SubcategoryRule("socks", "clothing", "Medias y soquetes", "Socks", (
+        "medias", "media", "soquete", "soquetes", "calcetines",
+    ), priority=20),
+    SubcategoryRule("hats", "clothing", "Gorros y sombreros", "Hats", (
+        "gorro", "gorros", "sombrero", "sombreros", "visera", "gorra",
+    ), priority=20),
+    SubcategoryRule("bags", "clothing", "Bolsos y mochilas", "Bags", (
+        "cartera", "carteras", "mochila", "mochilas", "bolso", "bolsos",
+        "rinonera", "riñonera", "valija",
+    ), priority=20),
+    SubcategoryRule("bathroom", "home_goods", "Baño", "Bathroom", (
+        "toalla de bano", "cortina de bano", "alfombra de bano", "dispenser",
+        "porta cepillo", "escobilla de bano",
+    ), priority=20),
+    SubcategoryRule("kitchen_textiles", "home_goods", "Textiles de cocina", "Kitchen textiles", (
+        "repasador", "repasadores", "delantal", "guante de cocina",
+        "manopla cocina", "secador", "trapo de cocina",
+    ), priority=20),
+    SubcategoryRule("vehicles", "toys_games", "Vehículos de juguete", "Toy vehicles", (
+        "autito", "autitos", "auto de juguete", "camion", "camioncito",
+        "moto de juguete", "tren", "tractor",
+    ), priority=20),
+    SubcategoryRule("educational", "toys_games", "Didácticos", "Educational toys", (
+        "didactico", "didacticos", "bloques", "encastre", "rompecabezas",
+        "puzzle", "abecedario",
+    ), priority=20),
+    SubcategoryRule("computing", "electronics", "Computación", "Computing", (
+        "notebook", "computadora", "monitor", "teclado", "mouse", "pc",
+        "impresora", "tablet",
+    ), priority=20),
+    SubcategoryRule("electronics_accessories", "electronics", "Accesorios", "Accessories", (
+        "cargador", "cargadores", "cable usb", "adaptador", "funda celular",
+        "protector de pantalla", "memoria",
+    ), priority=20),
+    SubcategoryRule("art_supplies", "stationery", "Arte", "Art supplies", (
+        "tempera", "temperas", "pincel", "pinceles", "acuarela", "acuarelas",
+        "crayon", "crayones", "plasticola", "tijera",
+    ), priority=20),
+    SubcategoryRule("measuring", "tools_hardware", "Medición", "Measuring", (
+        "cinta metrica", "nivel", "escuadra", "flexometro", "calibre",
+        "metro",
+    ), priority=20),
+)
+
+# Specific children outrank the broad "accessories"/"computing" siblings when
+# both match the same name.
+_SPECIFIC_SUBCATEGORY_PRIORITY = {"underwear", "socks", "hats", "bags", "printers"}
+SUBCATEGORY_RULES = tuple(
+    replace(rule, priority=25) if rule.key in _SPECIFIC_SUBCATEGORY_PRIORITY else rule
+    for rule in SUBCATEGORY_RULES
+)
+
+
 
 
 
