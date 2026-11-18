@@ -358,6 +358,21 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertIsNone(projected["referenceUnitPrice"])
 
+    def test_bare_orange_query_searches_the_spanish_catalog_term(self) -> None:
+        reader = self._Reader()
+        service = BackendService("", release_manager=self._ReleaseManager())
+        service._reader = lambda _handle: reader
+
+        with patch.dict(os.environ, {}, clear=True):
+            service.search({
+                "latitude": "-34.60",
+                "longitude": "-58.38",
+                "radiusKm": "5",
+                "query": "orange",
+            })
+
+        self.assertEqual(reader.args[0], "naranja")
+
     def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())

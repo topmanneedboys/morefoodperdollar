@@ -24,6 +24,7 @@ import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
@@ -1404,6 +1405,52 @@ def vocabulary_records_from_json_lines(lines: Iterable[str], *, max_records: int
         yield CatalogRecord.from_mapping(value)
 
 
+@lru_cache(maxsize=1)
+def default_vocabulary() -> Mapping[str, Any]:
+    """Load the shipped alias vocabulary once for read-only query helpers."""
+
+    return _load_data()
+
+
+def intent_excluded_terms(intent: ParsedIntent, *, data: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+    """Return the product-form exclusions attached to an intent's concept."""
+
+    vocabulary = data if data is not None else default_vocabulary()
+    concept = intent.concept
+    if not concept:
+        return ()
+    forms = vocabulary.get("productForms", {})
+    rule = forms.get(concept) if isinstance(forms, Mapping) else None
+    if not isinstance(rule, Mapping):
+        return ()
+    excluded: list[Any] = list(rule.get("exclude", ()) or ())
+    if intent.requested_form:
+        form_rules = rule.get("forms", {})
+        selected = form_rules.get(intent.requested_form) if isinstance(form_rules, Mapping) else None
+        if isinstance(selected, Mapping):
+            excluded.extend(selected.get("exclude", ()) or ())
+    return tuple(str(value) for value in excluded if str(value).strip())
+
+
+def name_matches_excluded_form(
+    name: Any,
+    brand: Any,
+    intent: ParsedIntent,
+    *,
+    data: Mapping[str, Any] | None = None,
+) -> bool:
+    """True when a catalog name carries a form the intent must not match."""
+
+    excluded = intent_excluded_terms(intent, data=data)
+    if not excluded:
+        return False
+    haystack = normalize_text(
+        " ".join(part for part in (name, brand) if isinstance(part, str)),
+        max_length=768,
+    )
+    return any(normalize_text(value) in haystack for value in excluded)
+
+
 __all__ = [
     "AMBIGUOUS_PRODUCT",
     "CANDIDATE_HORIZON_REACHED",
@@ -1431,6 +1478,9 @@ __all__ = [
     "apply_candidate_horizon_guard",
     "build_vocabulary",
     "canonical_feature_keys",
+    "default_vocabulary",
+    "intent_excluded_terms",
+    "name_matches_excluded_form",
     "normalize_text",
     "parse_intent",
     "parse_quantity",

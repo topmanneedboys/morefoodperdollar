@@ -32,6 +32,9 @@ try:
         ParsedIntent,
         apply_candidate_horizon_guard,
         parse_intent,
+        default_vocabulary,
+        intent_excluded_terms,
+        name_matches_excluded_form,
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
@@ -54,6 +57,9 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
         ParsedIntent,
         apply_candidate_horizon_guard,
         parse_intent,
+        default_vocabulary,
+        intent_excluded_terms,
+        name_matches_excluded_form,
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
@@ -798,6 +804,26 @@ class ArgentinaBackendReader:
     ) -> tuple[Mapping[str, Any], ...]:
         """Read one bounded regional identity window in stable order."""
 
+        # Apply the same product-form exclusions the interpreter uses: a bare
+        # "orange" query must not surface a flavoured spirit just because the
+        # brand name contains the word. Terms the shopper explicitly typed are
+        # kept, so "vodka orange" still searches vodka.
+        vocabulary = default_vocabulary()
+        normalized_query = input_normalize_text(query, max_length=512)
+        intent: ParsedIntent | None = None
+        exclusions: tuple[str, ...] = ()
+        try:
+            intent = parse_intent(query, data=vocabulary)
+        except InputIntelligenceError:
+            exclusions = ()
+        else:
+            exclusions = tuple(
+                term
+                for term in intent_excluded_terms(intent, data=vocabulary)
+                if input_normalize_text(term, max_length=128) not in normalized_query
+            )
+        window = product_limit
+
         search_started = time.perf_counter()
         searchpack = self._searchpack_for_region(region_id)
         if searchpack is not None:
@@ -805,7 +831,7 @@ class ArgentinaBackendReader:
             try:
                 ranked = searchpack.region(region_id).search_many(
                     (query,),
-                    product_limit=product_limit,
+                    product_limit=window,
                     candidate_bound=MAX_CANDIDATES,
                     stats=stats,
                 )
@@ -829,7 +855,7 @@ class ArgentinaBackendReader:
                     _raw, scored = _search_candidates_many(
                         contract,
                         (query,),
-                        product_limit=product_limit,
+                        product_limit=window,
                         max_candidates=MAX_CANDIDATES,
                     )
                 except (ArgentinaSepaQueryError, ValueError, OSError) as exc:
@@ -839,7 +865,15 @@ class ArgentinaBackendReader:
                     discovery_cache.popitem(last=False)
                 discovery_cache[cache_key] = values
         metrics.regional_search_ms += (time.perf_counter() - search_started) * 1000
-        return tuple(value if isinstance(value, Mapping) else {} for value in values)
+        projected = tuple(value if isinstance(value, Mapping) else {} for value in values)
+        if not exclusions or intent is None:
+            return projected
+        filtered = tuple(
+            value
+            for value in projected
+            if not name_matches_excluded_form(value.get("name"), value.get("brand"), intent, data=vocabulary)
+        )
+        return filtered[:product_limit]
 
     def _discover_ranked_values(
         self,

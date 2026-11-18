@@ -152,6 +152,18 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
                     # it must never be silently turned into a structured line.
                     self.assertIsNone(result.get("structuredLine"))
 
+    def test_excluded_forms_apply_to_search_ranking(self):
+        from tools.consumer_input_intelligence import (
+            intent_excluded_terms,
+            name_matches_excluded_form,
+            parse_intent,
+        )
+
+        intent = parse_intent("orange")
+        self.assertIn("vodka", intent_excluded_terms(intent))
+        self.assertTrue(name_matches_excluded_form("Vodka Orange 700 ml", None, intent))
+        self.assertFalse(name_matches_excluded_form("Naranja Fresca 1 kg", None, intent))
+
     def test_variants_negation_and_wrong_dimension(self):
         zero = self.line("coca zero 2.25l")
         self.assertEqual(zero["recognizedProduct"]["productEvidenceKey"], "coca-zero")

@@ -62,6 +62,8 @@ _FAMILY_DISCOVERY_QUERIES = {
     "egg": "huevo",
     "carrot": "carrot",
     "strawberry": "frutilla",
+    "orange": "naranja",
+    "apple": "manzana",
     "mango": "mango",
     "alfajor": "alfajor",
     "flour": "harina",
