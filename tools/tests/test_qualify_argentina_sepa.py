@@ -158,6 +158,15 @@ class ArgentinaSepaQualificationTest(unittest.TestCase):
         self.assertIsNone(parse_quantity("1", "PACK"))
         self.assertIsNone(parse_quantity("", "GRM"))
 
+    def test_reference_price_is_the_scaled_list_price(self):
+        from decimal import Decimal
+
+        package = parse_quantity("250", "CMQ")
+        basis = parse_quantity("1", "LTR")
+        self.assertEqual(package, ("MILLILITRE", 250))
+        self.assertEqual(basis, ("MILLILITRE", 1000))
+        self.assertEqual(Decimal("9055") * basis[1] / package[1], Decimal("36220"))
+
     def test_valid_nested_release_streams_rows_and_preserves_unknowns(self):
         products = PRODUCT_HEADER + "".join(
             [
