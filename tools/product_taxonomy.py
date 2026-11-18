@@ -44,6 +44,7 @@ MAX_NAMES_PER_PROVIDER = 32
 MAX_IDENTITIES_PER_PROVIDER = 512
 MAX_MATCHED_TERMS = 12
 MAX_FORMS = 12
+MAX_SUBCATEGORIES = 8
 MAX_CLARIFICATION_CHOICES = 30
 MAX_INDEX_RECORDS = 100_000
 MAX_INDEX_BYTES = 64 * 1024 * 1024
@@ -591,6 +592,329 @@ def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
 DEPARTMENT_RULES = tuple(_extend_review_batch_rules(rule) for rule in DEPARTMENT_RULES)
 
 
+@dataclass(frozen=True)
+class SubcategoryRule:
+    """One child of a department in the customer-facing category tree."""
+
+    key: str
+    parent: str
+    label_es: str
+    label_en: str
+    terms: tuple[str, ...]
+    excluded_terms: tuple[str, ...] = ()
+    priority: int = 50
+
+
+# A subcategory is only emitted when its parent department is also observed on
+# the same name, so the tree can never orphan a child under an unrelated
+# department.  Terms are deliberately concrete product types, not brands.
+SUBCATEGORY_RULES: tuple[SubcategoryRule, ...] = (
+    SubcategoryRule("fruit", "fresh_produce", "Frutas", "Fruit", (
+        "manzana", "naranja", "banana", "pera", "uva", "frutilla", "durazno",
+        "damasco", "ciruela", "sandia", "melon", "kiwi", "limon", "pomelo",
+        "mandarina", "palta", "mango", "anana", "arandano", "cereza", "higo",
+        "granada", "papaya", "pitaya",
+    ), priority=20),
+    SubcategoryRule("vegetables", "fresh_produce", "Verduras", "Vegetables", (
+        "tomate", "papa", "cebolla", "zanahoria", "lechuga", "zapallo",
+        "zucchini", "berenjena", "morron", "ajo", "puerro", "apio", "acelga",
+        "espinaca", "choclo", "brocoli", "coliflor", "repollo", "chaucha",
+        "remolacha", "batata", "hinojo", "radicheta", "rucula",
+    ), priority=20),
+    SubcategoryRule("herbs", "fresh_produce", "Hierbas frescas", "Fresh herbs", (
+        "perejil", "albahaca", "cilantro", "romero fresco", "tomillo fresco",
+        "menta fresca", "oregano fresco",
+    ), priority=15),
+    SubcategoryRule("water", "beverages", "Aguas", "Water", (
+        "agua mineral", "agua saborizada", "agua tonica", "agua",
+    ), priority=20),
+    SubcategoryRule("soda", "beverages", "Gaseosas y sodas", "Soda and soft drinks", (
+        "gaseosa", "soda", "cola", "sprite", "fanta", "seven up", "tonica",
+    ), priority=20),
+    SubcategoryRule("juice", "beverages", "Jugos y néctares", "Juice and nectar", (
+        "jugo", "zumo", "nectar", "multifruta", "jugo natural",
+    ), priority=20),
+    SubcategoryRule("beer", "beverages", "Cervezas", "Beer", (
+        "cerveza", "lager", "ipa", "pilsen", "stout", "rubia", "negra",
+    ), priority=25),
+    SubcategoryRule("wine", "beverages", "Vinos", "Wine", (
+        "vino", "malbec", "merlot", "syrah", "cabernet", "torrontes",
+        "chardonnay", "sauvignon", "pinot", "tinto", "blanco", "rosado",
+        "espumante", "brut", "champagne",
+    ), priority=25),
+    SubcategoryRule("spirits", "beverages", "Destilados", "Spirits", (
+        "vodka", "gin", "whisky", "whiskey", "ron", "tequila", "fernet",
+        "licor", "aperitivo", "coctel", "cocktail", "singani",
+    ), priority=25),
+    SubcategoryRule("coffee", "beverages", "Café", "Coffee", (
+        "cafe", "cafetera", "capsula de cafe", "cafe molido", "cafe en grano",
+    ), priority=20),
+    SubcategoryRule("tea", "beverages", "Tés e infusiones", "Tea and infusions", (
+        "te", "saquitos", "saquito", "infusion", "manzanilla", "tilo",
+    ), priority=20),
+    SubcategoryRule("yerba", "beverages", "Yerba mate", "Yerba mate", (
+        "yerba", "yerba mate", "mate cocido",
+    ), priority=25),
+    SubcategoryRule("milk", "dairy", "Leches", "Milk", (
+        "leche", "leche entera", "leche descremada", "leche en polvo",
+    ), priority=20),
+    SubcategoryRule("cheese", "dairy", "Quesos", "Cheese", (
+        "queso", "muzzarella", "mozzarella", "tybo", "cheddar", "parmesano",
+        "gouda", "brie", "camembert", "fontina", "sardo", "cremon", "ricota",
+        "provolone", "gruyere",
+    ), priority=20),
+    SubcategoryRule("yogurt", "dairy", "Yogures", "Yogurt", (
+        "yogur", "yogurt", "yogur griego",
+    ), priority=20),
+    SubcategoryRule("butter", "dairy", "Mantecas", "Butter", (
+        "manteca", "margarina",
+    ), priority=20),
+    SubcategoryRule("cream", "dairy", "Cremas", "Cream", (
+        "crema de leche", "crema", "crema para batir",
+    ), priority=20),
+    SubcategoryRule("dulce_de_leche", "dairy", "Dulce de leche", "Dulce de leche", (
+        "dulce de leche",
+    ), priority=25),
+    SubcategoryRule("beef", "meat_seafood", "Carnes vacunas", "Beef", (
+        "carne", "vacuno", "vacuna", "novillo", "bife", "asado", "milanesa",
+        "lomo", "roast beef", "osobuco",
+    ), priority=20),
+    SubcategoryRule("chicken", "meat_seafood", "Pollo", "Chicken", (
+        "pollo", "pata muslo", "muslo", "pechuga", "alitas",
+    ), priority=20),
+    SubcategoryRule("pork", "meat_seafood", "Cerdo", "Pork", (
+        "cerdo", "bondiola", "panceta", "costilla de cerdo", "matambrito",
+    ), priority=20),
+    SubcategoryRule("fish", "meat_seafood", "Pescados", "Fish", (
+        "pescado", "salmon", "merluza", "atun", "trucha", "sardina",
+        "caballa", "lenguado",
+    ), priority=20),
+    SubcategoryRule("seafood", "meat_seafood", "Mariscos", "Seafood", (
+        "camaron", "langostino", "mejillon", "calamar", "pulpo", "almeja",
+    ), priority=20),
+    SubcategoryRule("sausage", "meat_seafood", "Chorizos y jamones", "Sausage and ham", (
+        "chorizo", "salchicha", "salamin", "salami", "jamon", "mortadela",
+        "panceta", "bondiola",
+    ), priority=20),
+    SubcategoryRule("rice", "staples", "Arroz", "Rice", (
+        "arroz", "arroz largo fino", "arroz parboil", "arroz yamani",
+    ), priority=20),
+    SubcategoryRule("pasta", "staples", "Pastas", "Pasta", (
+        "fideos", "fideo", "spaghetti", "fusilli", "penne", "mostachol",
+        "tirabuzon", "rigate", "raviol", "ñoqui", "noqui", "tallarin",
+    ), priority=20),
+    SubcategoryRule("flour", "staples", "Harinas", "Flour", (
+        "harina", "harina de trigo", "harina leudante", "semola", "polenta",
+        "maicena", "almidon",
+    ), priority=20),
+    SubcategoryRule("bread", "staples", "Panes", "Bread", (
+        "pan", "baguette", "baguetin", "pan lactal", "pan de molde", "pebete",
+        "facturas", "medialunas",
+    ), priority=20),
+    SubcategoryRule("legumes", "staples", "Legumbres", "Legumes", (
+        "lentejas", "garbanzos", "porotos", "arvejas", "alubias", "soja",
+    ), priority=20),
+    SubcategoryRule("sugar", "staples", "Azúcar", "Sugar", (
+        "azucar", "azucar impalpable", "azucar rubia", "edulcorante",
+    ), priority=20),
+    SubcategoryRule("oil", "condiments", "Aceites", "Oil", (
+        "aceite", "aceite de oliva", "oliva", "girasol", "maiz", "canola",
+        "mezcla de aceites",
+    ), priority=20),
+    SubcategoryRule("vinegar", "condiments", "Vinagres", "Vinegar", (
+        "vinagre", "aceto", "vinagre balsamico",
+    ), priority=20),
+    SubcategoryRule("sauce", "condiments", "Salsas", "Sauces", (
+        "salsa", "mayonesa", "ketchup", "mostaza", "barbacoa", "soja",
+        "pesto", "tomate triturado", "pure de tomate",
+    ), priority=20),
+    SubcategoryRule("salt", "condiments", "Sal", "Salt", (
+        "sal", "sal fina", "sal gruesa", "sal marina",
+    ), priority=20),
+    SubcategoryRule("spices", "condiments", "Especias", "Spices", (
+        "pimienta", "oregano", "comino", "canela", "pimenton", "aji molido",
+        "curcuma", "jengibre", "laurel", "nuez moscada", "romero",
+    ), priority=20),
+    SubcategoryRule("cookies", "snacks_sweets", "Galletitas", "Cookies", (
+        "galletita", "galletitas", "galleta", "cracker", "crackers", "oblea",
+        "wafer", "pepitona",
+    ), priority=20),
+    SubcategoryRule("chocolate", "snacks_sweets", "Chocolates", "Chocolate", (
+        "chocolate", "chocolat", "cacao", "bombon", "bombones",
+    ), priority=20),
+    SubcategoryRule("candy", "snacks_sweets", "Golosinas", "Candy", (
+        "caramelo", "caramelos", "golosina", "golosinas", "chicle", "chicles",
+        "gomita", "gomitas", "pastillas",
+    ), priority=20),
+    SubcategoryRule("chips", "snacks_sweets", "Snacks salados", "Salty snacks", (
+        "papas fritas", "papas", "pochoclo", "pochoclos", "palitos", "snack",
+        "snacks", "mani salado",
+    ), priority=20),
+    SubcategoryRule("alfajor", "snacks_sweets", "Alfajores", "Alfajor", (
+        "alfajor", "alfajores",
+    ), priority=25),
+    SubcategoryRule("detergent", "household_cleaning", "Detergentes", "Detergent", (
+        "detergente", "detergente liquido", "jabon liquido para ropa",
+    ), priority=20),
+    SubcategoryRule("bleach", "household_cleaning", "Lavandina", "Bleach", (
+        "lavandina", "cloro",
+    ), priority=20),
+    SubcategoryRule("soap", "household_cleaning", "Jabones", "Soap", (
+        "jabon", "jabon de glicerina", "jabon blanco",
+    ), priority=20),
+    SubcategoryRule("paper", "household_cleaning", "Papel", "Paper", (
+        "papel higienico", "servilleta", "servilletas", "rollo de cocina",
+        "papel de cocina", "pañuelo", "panuelo",
+    ), priority=20),
+    SubcategoryRule("bags", "household_cleaning", "Bolsas", "Bags", (
+        "bolsa", "bolsas", "bolsa de residuos", "bolsas de residuos",
+    ), priority=20),
+    SubcategoryRule("cleaner", "household_cleaning", "Limpiadores", "Cleaners", (
+        "limpiador", "desinfectante", "desinf", "lavavajillas", "limpiador de pisos",
+        "limpia vidrios", "vidrios",
+    ), priority=20),
+    SubcategoryRule("shampoo", "personal_care", "Shampoo", "Shampoo", (
+        "shampoo", "champu",
+    ), priority=20),
+    SubcategoryRule("conditioner", "personal_care", "Acondicionador", "Conditioner", (
+        "acondicionador", "acond",
+    ), priority=20),
+    SubcategoryRule("toothpaste", "personal_care", "Cuidado bucal", "Oral care", (
+        "dentifrico", "pasta dental", "cepillo dental", "enjuague bucal",
+        "hilo dental",
+    ), priority=20),
+    SubcategoryRule("deodorant", "personal_care", "Desodorantes", "Deodorant", (
+        "desodorante", "antitranspirante",
+    ), priority=20),
+    SubcategoryRule("shaving", "personal_care", "Afeitado", "Shaving", (
+        "afeitadora", "maquina de afeitar", "hoja de afeitar", "crema de afeitar",
+        "gel de afeitar", "after shave",
+    ), priority=20),
+    SubcategoryRule("feminine", "personal_care", "Higiene femenina", "Feminine care", (
+        "toallitas femeninas", "tampon", "tampones", "protector diario",
+    ), priority=20),
+    SubcategoryRule("cosmetics", "personal_care", "Maquillaje", "Cosmetics", (
+        "maquillaje", "labial", "mascara de pestañas", "rubor", "base maquillaje",
+        "esmalte", "delineador",
+    ), priority=20),
+    SubcategoryRule("hair_color", "personal_care", "Coloración", "Hair color", (
+        "tintura", "coloracion", "hair color", "koleston", "policrom",
+    ), priority=20),
+    SubcategoryRule("diapers", "baby_pet", "Pañales", "Diapers", (
+        "pañal", "panal", "pañales", "panales", "toallitas humedas",
+    ), priority=20),
+    SubcategoryRule("formula", "baby_pet", "Fórmulas", "Formula", (
+        "formula infantil", "leche de formula", "formula",
+    ), priority=20),
+    SubcategoryRule("baby_food", "baby_pet", "Alimento bebé", "Baby food", (
+        "alimento bebe", "papilla", "colado", "baby food",
+    ), priority=20),
+    SubcategoryRule("pet_food", "baby_pet", "Alimento mascotas", "Pet food", (
+        "alimento perro", "alimento gato", "alimento para perros",
+        "alimento para gatos", "dog food", "cat food", "purina", "whiskas",
+    ), priority=20),
+    SubcategoryRule("litter", "baby_pet", "Piedras sanitarias", "Cat litter", (
+        "piedras sanitarias", "arena para gatos",
+    ), priority=20),
+    SubcategoryRule("pain", "health_supplements", "Analgésicos", "Pain relief", (
+        "ibuprofeno", "paracetamol", "aspirina", "analgesico", "diclofenac",
+    ), priority=20),
+    SubcategoryRule("vitamins", "health_supplements", "Vitaminas", "Vitamins", (
+        "vitamina", "vitaminas", "suplemento", "suplementos", "colageno",
+    ), priority=20),
+    SubcategoryRule("first_aid", "health_supplements", "Primeros auxilios", "First aid", (
+        "curita", "curitas", "termometro", "alcohol etilico", "agua oxigenada",
+    ), priority=20),
+    SubcategoryRule("cookware", "home_goods", "Cocina", "Cookware", (
+        "olla", "cacerola", "sarten", "bandeja", "asadera", "rallador",
+        "tabla de corte", "pava",
+    ), priority=20),
+    SubcategoryRule("tableware", "home_goods", "Mesa", "Tableware", (
+        "plato", "vaso", "taza", "cubierto", "cuchillo", "tenedor", "cuchara",
+        "jarra", "mug",
+    ), priority=20),
+    SubcategoryRule("bedding", "home_goods", "Blanquería", "Bedding", (
+        "sabana", "sabanas", "almohada", "almohadas", "acolchado", "funda",
+        "colcha", "manta",
+    ), priority=20),
+    SubcategoryRule("decor", "home_goods", "Decoración", "Decor", (
+        "adorno", "florero", "espejo", "portarretrato", "cuadro", "vela",
+        "sahumerio", "difusor",
+    ), priority=20),
+    SubcategoryRule("storage", "home_goods", "Organización", "Storage", (
+        "organizador", "cesto", "caja organizadora", "canasto", "estante",
+    ), priority=20),
+    SubcategoryRule("tops", "clothing", "Tops", "Tops", (
+        "remera", "camisa", "buzo", "musculosa", "camiseta", "blusa", "top",
+    ), priority=20),
+    SubcategoryRule("bottoms", "clothing", "Pantalones", "Bottoms", (
+        "pantalon", "short", "pollera", "calza", "legging", "jean", "bermuda",
+    ), priority=20),
+    SubcategoryRule("outerwear", "clothing", "Abrigos", "Outerwear", (
+        "campera", "chaleco", "saco", "abrigo", "canguro", "parka",
+    ), priority=20),
+    SubcategoryRule("footwear", "clothing", "Calzado", "Footwear", (
+        "zapatilla", "zapatillas", "sandalia", "ojota", "pantufla", "bota",
+        "zapato", "alpargata",
+    ), priority=20),
+    SubcategoryRule("accessories", "clothing", "Accesorios", "Accessories", (
+        "gorro", "bufanda", "cinturon", "corbata", "cartera", "mochila",
+        "guante", "medias", "media",
+    ), priority=20),
+    SubcategoryRule("swimwear", "clothing", "Trajes de baño", "Swimwear", (
+        "malla", "traje de bano", "bikini", "swimwear",
+    ), priority=25),
+    SubcategoryRule("dolls", "toys_games", "Muñecas y peluches", "Dolls and plush", (
+        "muneca", "peluche", "muñeca", "barbie",
+    ), priority=20),
+    SubcategoryRule("games", "toys_games", "Juegos", "Games", (
+        "rompecabezas", "puzzle", "cartas", "juego de mesa", "bloques", "didactico",
+    ), priority=20),
+    SubcategoryRule("outdoor_toys", "toys_games", "Juegos de exterior", "Outdoor toys", (
+        "pelota", "bicicleta", "patineta", "monopatin", "hula", "balde",
+    ), priority=20),
+    SubcategoryRule("balloons", "toys_games", "Globos", "Balloons", (
+        "globo", "globos",
+    ), priority=25),
+    SubcategoryRule("phones", "electronics", "Celulares", "Phones", (
+        "celular", "smartphone", "telefono", "samsung", "xiaomi", "redmi",
+        "galaxy", "motorola",
+    ), priority=20),
+    SubcategoryRule("audio", "electronics", "Audio", "Audio", (
+        "auricular", "auriculares", "parlante", "earbud", "earbuds", "barra de sonido",
+    ), priority=20),
+    SubcategoryRule("appliances", "electronics", "Electrodomésticos", "Appliances", (
+        "heladera", "lavarropas", "microondas", "licuadora", "batidora",
+        "tostadora", "cafetera", "freidora", "airfryer", "aspiradora",
+    ), priority=20),
+    SubcategoryRule("tv", "electronics", "Televisores", "TV", (
+        "televisor", "televisores", "qled", "smart tv", "led tv",
+    ), priority=20),
+    SubcategoryRule("notebooks", "stationery", "Cuadernos", "Notebooks", (
+        "cuaderno", "cuadernos", "block", "libreta",
+    ), priority=20),
+    SubcategoryRule("writing", "stationery", "Escritura", "Writing", (
+        "lapiz", "lapicera", "birome", "marcador", "resaltador", "boligrafo",
+        "fibra", "crayon",
+    ), priority=20),
+    SubcategoryRule("paper_goods", "stationery", "Papelería", "Paper goods", (
+        "cartulina", "carpeta", "resma", "papel", "sobre", "folio",
+    ), priority=20),
+    SubcategoryRule("hand_tools", "tools_hardware", "Herramientas de mano", "Hand tools", (
+        "destornillador", "martillo", "pinza", "llave", "serrucho", "cutter",
+        "cinta metrica",
+    ), priority=20),
+    SubcategoryRule("power_tools", "tools_hardware", "Herramientas eléctricas", "Power tools", (
+        "taladro", "sierra", "amoladora", "lijadora", "soldadora",
+    ), priority=20),
+    SubcategoryRule("fasteners", "tools_hardware", "Fijaciones", "Fasteners", (
+        "clavo", "clavos", "tornillo", "tornillos", "tarugo", "tuerca",
+        "arandela",
+    ), priority=20),
+)
+
+
+
 # Form rules are intentionally reusable across families.  They are used to
 # produce clarification choices from forms actually observed in the source.
 FORM_RULES: tuple[TaxonomyRule, ...] = (
@@ -716,6 +1040,25 @@ def classify_name(name: str, *, family_candidates: Iterable[Mapping[str, Any]] =
             })
     families.sort(key=lambda item: (item["family"], item["role"], item["matchedTerms"]))
 
+    parent_keys = {item["key"] for item in departments}
+    subcategories: list[dict[str, Any]] = []
+    for rule in SUBCATEGORY_RULES:
+        if rule.parent not in parent_keys:
+            continue
+        matched = _matched_terms(tokens, rule)
+        if matched and not _has_exclusion(tokens, rule):
+            subcategories.append({
+                "key": rule.key,
+                "parent": rule.parent,
+                "labelEs": rule.label_es,
+                "labelEn": rule.label_en,
+                "matchedTerms": list(matched),
+                "priority": rule.priority,
+                "evidence": "SOURCE_NAME",
+            })
+    subcategories.sort(key=lambda item: (-int(item["priority"]), item["key"]))
+    primary_subcategory = subcategories[0]["key"] if subcategories else None
+
     if departments:
         top_priority = int(departments[0]["priority"])
         top = [item for item in departments if int(item["priority"]) == top_priority]
@@ -732,7 +1075,9 @@ def classify_name(name: str, *, family_candidates: Iterable[Mapping[str, Any]] =
     return {
         "coverageStatus": status,
         "primaryDepartment": primary,
+        "primarySubcategory": primary_subcategory,
         "departmentCandidates": departments,
+        "subcategoryCandidates": subcategories[:MAX_SUBCATEGORIES],
         "familyCandidates": families,
         "formCandidates": forms[:MAX_FORMS],
     }
@@ -1048,6 +1393,7 @@ def build_taxonomy_index(
             # found at one retailer is retained for the provider product.
             classified = [classify_name(name, family_candidates=family_candidates) for name in canonical_names]
             department_by_key: dict[str, dict[str, Any]] = {}
+            subcategory_by_key: dict[str, dict[str, Any]] = {}
             form_by_key: dict[str, dict[str, Any]] = {}
             statuses = []
             for result in classified:
@@ -1055,13 +1401,18 @@ def build_taxonomy_index(
                 for item in result["departmentCandidates"]:
                     existing = department_by_key.setdefault(item["key"], {**item, "matchedTerms": []})
                     existing["matchedTerms"] = sorted(set(existing["matchedTerms"]) | set(item["matchedTerms"]))[:MAX_MATCHED_TERMS]
+                for item in result.get("subcategoryCandidates", []):
+                    existing = subcategory_by_key.setdefault(item["key"], {**item, "matchedTerms": []})
+                    existing["matchedTerms"] = sorted(set(existing["matchedTerms"]) | set(item["matchedTerms"]))[:MAX_MATCHED_TERMS]
                 for item in result["formCandidates"]:
                     existing = form_by_key.setdefault(item["key"], {**item, "matchedTerms": []})
                     existing["matchedTerms"] = sorted(set(existing["matchedTerms"]) | set(item["matchedTerms"]))[:MAX_MATCHED_TERMS]
             departments = sorted(department_by_key.values(), key=lambda item: (-int(item["priority"]), item["key"]))
+            subcategories = sorted(subcategory_by_key.values(), key=lambda item: (-int(item["priority"]), item["key"]))
             top_priority = int(departments[0]["priority"]) if departments else None
             top = [item for item in departments if int(item["priority"]) == top_priority] if top_priority is not None else []
             primary = top[0]["key"] if len(top) == 1 else None
+            primary_subcategory = subcategories[0]["key"] if subcategories else None
             if primary is not None:
                 status = "CLASSIFIED"
             elif departments or family_candidates:
@@ -1078,7 +1429,9 @@ def build_taxonomy_index(
                 "taxonomy": {
                     "coverageStatus": status,
                     "primaryDepartment": primary,
+                    "primarySubcategory": primary_subcategory,
                     "departmentCandidates": departments,
+                    "subcategoryCandidates": subcategories[:MAX_SUBCATEGORIES],
                     "familyCandidates": family_candidates,
                     "formCandidates": sorted(form_by_key.values(), key=lambda item: item["key"])[:MAX_FORMS],
                 },
@@ -1097,7 +1450,9 @@ def build_taxonomy_index(
             "identityCount": value["identityCount"],
             "coverageStatus": value["taxonomy"]["coverageStatus"],
             "primaryDepartment": value["taxonomy"]["primaryDepartment"],
+            "primarySubcategory": value["taxonomy"].get("primarySubcategory"),
             "departmentCandidates": value["taxonomy"]["departmentCandidates"],
+            "subcategoryCandidates": value["taxonomy"].get("subcategoryCandidates", []),
             "familyCandidates": value["taxonomy"]["familyCandidates"],
             "formCandidates": value["taxonomy"]["formCandidates"],
         }
@@ -1112,15 +1467,20 @@ def build_taxonomy_index(
 
     status_counts = Counter(value["taxonomy"]["coverageStatus"] for value in records)
     department_counts = Counter()
+    subcategory_counts = Counter()
     form_counts = Counter()
     family_counts = Counter()
     multiple_departments = 0
+    products_with_subcategory = 0
     for value in records:
         taxonomy = value["taxonomy"]
         if len(taxonomy["departmentCandidates"]) > 1:
             multiple_departments += 1
         if taxonomy["primaryDepartment"]:
             department_counts[taxonomy["primaryDepartment"]] += 1
+        if taxonomy.get("primarySubcategory"):
+            products_with_subcategory += 1
+            subcategory_counts[taxonomy["primarySubcategory"]] += 1
         for item in taxonomy["departmentCandidates"]:
             department_counts[f"candidate:{item['key']}"] += 1
         for item in taxonomy["formCandidates"]:
@@ -1145,7 +1505,9 @@ def build_taxonomy_index(
             "statusCounts": dict(sorted(status_counts.items())),
             "reviewQueueRecords": len(review_records),
             "productsWithMultipleDepartmentCandidates": multiple_departments,
+            "productsWithPrimarySubcategory": products_with_subcategory,
             "departmentCandidateCounts": dict(sorted(department_counts.items())),
+            "subcategoryCandidateCounts": dict(sorted(subcategory_counts.items())),
             "formCounts": dict(sorted(form_counts.items())),
             "familyCounts": dict(sorted(family_counts.items())),
         },

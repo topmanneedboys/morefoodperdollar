@@ -214,6 +214,26 @@ class ProductTaxonomyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "providerProductId"):
                 build_taxonomy_index(source, root / "taxonomy.jsonl", root / "report.json")
 
+    def test_subcategory_tree_emits_children_only_under_observed_parents(self) -> None:
+        cases = {
+            "Naranja Fresca 1 kg": ("fruit", "fresh_produce"),
+            "Vodka 700 ml": ("spirits", "beverages"),
+            "Arroz Largo Fino 1 kg": ("rice", "staples"),
+            "Queso Cremoso 500 g": ("cheese", "dairy"),
+            "Detergente Limon 500 ml": ("detergent", "household_cleaning"),
+            "Remera Algodon M": ("tops", "clothing"),
+        }
+        for name, (subcategory, department) in cases.items():
+            with self.subTest(name=name):
+                result = classify_name(name)
+                self.assertEqual(result["primarySubcategory"], subcategory)
+                parents = {item["key"] for item in result["departmentCandidates"]}
+                self.assertIn(department, parents)
+                self.assertTrue(
+                    all(item["parent"] in parents for item in result["subcategoryCandidates"]),
+                    "a subcategory was emitted under an unobserved department",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
