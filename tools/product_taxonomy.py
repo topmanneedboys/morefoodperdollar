@@ -581,6 +581,21 @@ _REVIEW_BATCH_DEPARTMENT_TERMS.update({
         "rigida", "rigidas",
     ),
 })
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "home_goods": _REVIEW_BATCH_DEPARTMENT_TERMS["home_goods"] + (
+        "asadera", "asaderas", "copetinero", "copetinera", "panera",
+        "azucarera", "ensaladera", "destapador", "colador", "embudo",
+    ),
+    "meat_seafood": _REVIEW_BATCH_DEPARTMENT_TERMS["meat_seafood"] + (
+        "mortadela", "salchichon", "salchichón", "salame", "salamín",
+    ),
+})
+_REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
+    "clothing": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("clothing", ()) + (
+        "asadera", "mantel", "cortina", "sabana", "toalla", "acolchado",
+        "alfombra", "repasador",
+    ),
+})
 
 
 def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
@@ -911,6 +926,62 @@ SUBCATEGORY_RULES: tuple[SubcategoryRule, ...] = (
         "clavo", "clavos", "tornillo", "tornillos", "tarugo", "tuerca",
         "arandela",
     ), priority=20),
+)
+
+# Second subcategory batch (2026-11-18): covers the departments with the most
+# classified-but-childless products in the review report.
+SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
+    SubcategoryRule("kitchen_accessories", "home_goods", "Accesorios de cocina", "Kitchen accessories", (
+        "botella", "botellas", "copetinero", "copetinera", "destapador",
+        "colador", "embudo", "recipiente", "bowl", "ensaladera", "panera",
+        "azucarera", "lechera", "hielera", "botellita",
+    ), priority=20),
+    SubcategoryRule("home_textiles", "home_goods", "Textiles de hogar", "Home textiles", (
+        "cortina", "cortinas", "mantel", "manteles", "repasador", "repasadores",
+        "toalla", "toallas", "sabana", "sabanas", "funda", "fundas", "almohada",
+        "almohadas", "acolchado", "manta", "cubre", "individual",
+    ), priority=20),
+    SubcategoryRule("laundry_home", "home_goods", "Lavadero", "Laundry", (
+        "tendedero", "tabla de planchar", "plancha", "canasto", "bolsa de ropa",
+    ), priority=20),
+    SubcategoryRule("cleaning_tools", "household_cleaning", "Elementos de limpieza", "Cleaning tools", (
+        "escoba", "escobas", "pala", "cepillo", "lampazo", "mopa", "balde",
+        "secador de piso", "trapo", "trapo de piso", "esponja", "franela",
+        "escobillon", "escobillón", "plumero",
+    ), priority=20),
+    SubcategoryRule("wraps", "household_cleaning", "Papel y film", "Wraps and film", (
+        "rollo aluminio", "papel aluminio", "film", "papel film",
+        "papel manteca", "rollo film", "papel de cocina",
+    ), priority=20),
+    SubcategoryRule("dulces", "snacks_sweets", "Dulces y mermeladas", "Jams and preserves", (
+        "dulce de batata", "dulce de membrillo", "jalea", "mermelada",
+        "mermeladas", "dulce", "dulces",
+    ), priority=20),
+    SubcategoryRule("nuts", "snacks_sweets", "Frutos secos", "Nuts", (
+        "mani", "maní", "nueces", "almendras", "castañas", "castanas",
+        "frutos secos", "pistacho", "pistachos", "avellanas", "semillas",
+    ), priority=20),
+    SubcategoryRule("cakes", "snacks_sweets", "Budines y tortas", "Cakes", (
+        "budin", "budín", "torta", "tortas", "bizcochuelo", "pionono",
+        "brownie", "brownies", "budin de", "torta de",
+    ), priority=20),
+    SubcategoryRule("small_appliances", "electronics", "Pequeños electrodomésticos", "Small appliances", (
+        "cocina electrica", "cocina eléctrica", "horno electrico", "horno eléctrico",
+        "pava electrica", "pava eléctrica", "cafetera", "tostadora", "freidora",
+        "batidora", "licuadora", "plancha", "aspiradora", "ventilador",
+    ), priority=20),
+    SubcategoryRule("tablets", "electronics", "Tablets", "Tablets", (
+        "tablet", "tablets", "ipad",
+    ), priority=25),
+)
+
+SUBCATEGORY_RULES = tuple(
+    rule if rule.key != "bottoms" else SubcategoryRule(
+        rule.key, rule.parent, rule.label_es, rule.label_en,
+        rule.terms + ("jogger", "joggers", "jogging"),
+        rule.excluded_terms, rule.priority,
+    )
+    for rule in SUBCATEGORY_RULES
 )
 
 
