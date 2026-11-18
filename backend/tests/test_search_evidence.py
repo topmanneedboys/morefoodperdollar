@@ -373,6 +373,43 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertEqual(reader.args[0], "naranja")
 
+    def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
+        from backend.service import _search_facets
+
+        candidates = [
+            {
+                "brand": "Marca A",
+                "quantity": {"value": "500", "unit": "g"},
+                "_taxonomy": {
+                    "primaryDepartment": "dairy",
+                    "departmentCandidates": [{"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}],
+                    "primarySubcategory": "milk",
+                    "subcategoryCandidates": [{"key": "milk", "labelEs": "Leches", "labelEn": "Milk"}],
+                },
+                "qualifiedOffers": [
+                    {"storeName": "Store 1", "listPrice": {"amount": "1000", "currency": "ARS"}}
+                ],
+            },
+            {
+                "brand": "Marca B",
+                "quantity": {"value": "1", "unit": "l"},
+                "qualifiedOffers": [
+                    {"storeName": "Store 2", "listPrice": {"amount": "2500", "currency": "ARS"}}
+                ],
+            },
+        ]
+
+        facets = _search_facets(candidates)
+
+        self.assertEqual(
+            facets["departments"],
+            [{"key": "dairy", "count": 1, "labelEs": "Lácteos", "labelEn": "Dairy"}],
+        )
+        self.assertEqual(facets["subcategories"][0]["key"], "milk")
+        self.assertEqual([item["key"] for item in facets["brands"]], ["Marca A", "Marca B"])
+        self.assertEqual([item["key"] for item in facets["stores"]], ["Store 1", "Store 2"])
+        self.assertEqual(facets["priceRange"], {"min": "1000", "max": "2500", "currency": "ARS"})
+
     def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())
