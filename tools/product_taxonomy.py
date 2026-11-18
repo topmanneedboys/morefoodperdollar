@@ -597,6 +597,91 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
     ),
 })
 
+# Batch 2026-11-18 (e): relevance-set gaps. Adds missing product-type words and
+# moves sugar/sweetener from condiments to staples, the eBay-like pantry group.
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "beverages": _REVIEW_BATCH_DEPARTMENT_TERMS["beverages"] + (
+        "tequila", "whisky", "vodka", "gin", "ron", "cerveza rubia",
+        "agua mineral", "agua saborizada", "agua tonica",
+    ),
+    "fresh_produce": _REVIEW_BATCH_DEPARTMENT_TERMS["fresh_produce"] + (
+        "acelga", "albahaca", "arandano", "arandanos", "cereza", "cerezas",
+        "choclo", "cilantro", "damasco", "damascos", "melon", "melones",
+        "perejil", "sandia", "sandias", "uva", "uvas", "zucchini",
+        "zucchinis", "zanahoria", "zanahorias",
+    ),
+    "meat_seafood": _REVIEW_BATCH_DEPARTMENT_TERMS["meat_seafood"] + (
+        "calamar", "calamares", "langostino", "langostinos", "lomo",
+        "pechuga", "pechugas", "bife", "asado", "osobuco",
+    ),
+    "dairy": _REVIEW_BATCH_DEPARTMENT_TERMS["dairy"] + (
+        "leche entera", "leche descremada", "leche en polvo", "queso rallado",
+        "yogur griego", "ricota",
+    ),
+    "staples": _REVIEW_BATCH_DEPARTMENT_TERMS["staples"] + (
+        "facturas", "medialunas", "maicena", "noquis", "ñoquis", "ravioles",
+        "tallarin", "tallarines", "azucar", "edulcorante", "azucar impalpable",
+    ),
+    "condiments": _REVIEW_BATCH_DEPARTMENT_TERMS["condiments"] + (
+        "nuez moscada", "pimienta negra", "oregano", "comino", "pimenton",
+        "canela",
+    ),
+    "snacks_sweets": _REVIEW_BATCH_DEPARTMENT_TERMS["snacks_sweets"] + (
+        "almendra", "almendras", "nuez", "nueces", "budin", "torta",
+        "oblea", "obleas", "palitos", "chocolinas",
+    ),
+    "household_cleaning": _REVIEW_BATCH_DEPARTMENT_TERMS["household_cleaning"] + (
+        "balde", "lavavajillas", "esponja", "escoba", "mopa", "trapo",
+        "servilletas", "rollo de cocina",
+    ),
+    "personal_care": _REVIEW_BATCH_DEPARTMENT_TERMS["personal_care"] + (
+        "cepillo de dientes", "hojas de afeitar", "toallitas femeninas",
+        "esmalte", "enjuague bucal", "pasta dental",
+    ),
+    "home_goods": _REVIEW_BATCH_DEPARTMENT_TERMS["home_goods"] + (
+        "tabla de cortar", "olla", "sarten", "cacerola", "plato", "vaso",
+        "taza", "cubiertos", "cuchillo", "tabla",
+    ),
+    "clothing": _REVIEW_BATCH_DEPARTMENT_TERMS["clothing"] + (
+        "traje de bano", "zapatillas", "sandalias", "ojotas", "medias",
+        "cinturon", "cartera", "mochila",
+    ),
+    "toys_games": _REVIEW_BATCH_DEPARTMENT_TERMS["toys_games"] + (
+        "autito", "autitos", "rompecabezas", "pelota", "bicicleta",
+    ),
+    "electronics": _REVIEW_BATCH_DEPARTMENT_TERMS["electronics"] + (
+        "celular", "tablet", "auriculares", "parlante", "televisor",
+        "heladera", "lavarropas", "microondas", "licuadora", "cafetera",
+        "tostadora", "aspiradora",
+    ),
+    "health_supplements": _REVIEW_BATCH_DEPARTMENT_TERMS["health_supplements"] + (
+        "alcohol en gel", "vitamina c", "aspirina", "curitas",
+    ),
+})
+_REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
+    "beverages": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("beverages", ()) + (
+        "galletita", "galletitas", "galleta", "galletas",
+    ),
+    "staples": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("staples", ()) + (
+        "dental",
+    ),
+    "condiments": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("condiments", ()) + (
+        "azucar", "edulcorante",
+    ),
+    "baby_pet": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("baby_pet", ()) + (
+        "femenina", "femeninas",
+    ),
+    "snacks_sweets": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("snacks_sweets", ()) + (
+        "moscada",
+    ),
+    "fresh_produce": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("fresh_produce", ()) + (
+        "mentho", "mentho-plus", "acido", "acidos", "acid",
+    ),
+    "household_cleaning": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("household_cleaning", ()) + (
+        "bloques", "arena", "didactico", "juguete", "juguetes",
+    ),
+})
+
 
 def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
     terms = tuple(dict.fromkeys(rule.terms + _REVIEW_BATCH_DEPARTMENT_TERMS.get(rule.key, ())))
