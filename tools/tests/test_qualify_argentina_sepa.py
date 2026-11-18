@@ -155,6 +155,8 @@ class ArgentinaSepaQualificationTest(unittest.TestCase):
         self.assertEqual(("MILLILITRE", 1000), parse_quantity("1", "ltr"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UNI"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UD"))
+        self.assertEqual(("COUNT", 3), parse_quantity("3", "CU"))
+        self.assertEqual(("GRAM", 1000), parse_quantity("1", "KGR"))
         self.assertIsNone(parse_quantity("1", "PACK"))
         self.assertIsNone(parse_quantity("", "GRM"))
 
@@ -166,6 +168,13 @@ class ArgentinaSepaQualificationTest(unittest.TestCase):
         self.assertEqual(package, ("MILLILITRE", 250))
         self.assertEqual(basis, ("MILLILITRE", 1000))
         self.assertEqual(Decimal("9055") * basis[1] / package[1], Decimal("36220"))
+
+    def test_multipack_name_count_is_used_for_pack_presentations(self):
+        from tools.argentina_quantity import parse_size
+
+        parsed = parse_size("TOALLAS HUMEDAS PAMPERS X 48 UN")
+        self.assertEqual(parsed["kind"], "count")
+        self.assertEqual(parsed["quantity"], 48)
 
     def test_valid_nested_release_streams_rows_and_preserves_unknowns(self):
         products = PRODUCT_HEADER + "".join(

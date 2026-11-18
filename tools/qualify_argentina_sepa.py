@@ -210,6 +210,7 @@ _UNIT_ALIASES: dict[str, tuple[str, Decimal]] = {
     "KG": ("GRAM", Decimal("1000")),
     "KGS": ("GRAM", Decimal("1000")),
     "KGM": ("GRAM", Decimal("1000")),
+    "KGR": ("GRAM", Decimal("1000")),
     "KILO": ("GRAM", Decimal("1000")),
     "KILOS": ("GRAM", Decimal("1000")),
     "KILOGRAM": ("GRAM", Decimal("1000")),
@@ -245,6 +246,7 @@ _UNIT_ALIASES: dict[str, tuple[str, Decimal]] = {
     "UNIDAD": ("COUNT", Decimal("1")),
     "UNIDADES": ("COUNT", Decimal("1")),
     "UD": ("COUNT", Decimal("1")),
+    "CU": ("COUNT", Decimal("1")),
     "EA": ("COUNT", Decimal("1")),
     "EACH": ("COUNT", Decimal("1")),
     "ITEM": ("COUNT", Decimal("1")),
@@ -854,6 +856,14 @@ def _quantity_value(row: list[str], indexes: Mapping[str, int]) -> tuple[dict[st
             amount = Decimal(str(name_size["quantity"])) * canonical[1]
             parsed = (canonical[0], amount)
             raw_value = _clean(f"{name_size['quantity']} {name_size['unit']}")
+    elif name_size["kind"] == "count" and name_size["quantity"] > 0:
+        # Multipacks are commonly listed as "1 PCK" while the name carries the
+        # real count ("X 48 UN").  Use that count instead of treating one pack
+        # as one unit; without a name count the pack stays unknown.
+        if parsed is None or parsed[0] == "COUNT":
+            count_unit = name_size.get("unit") or "un"
+            parsed = ("COUNT", Decimal(str(name_size["quantity"])))
+            raw_value = _clean(f"{name_size['quantity']} {count_unit}")
 
     if parsed is None:
         return None, "UNKNOWN"
