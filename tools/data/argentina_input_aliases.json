@@ -187,7 +187,7 @@
       }
     },
     "apple": {"exclude": ["jugo", "juice", "sabor", "flavour", "flavor"]},
-    "orange": {"exclude": ["gaseosa", "soda", "drink", "jugo", "juice", "sabor", "flavour", "flavor"]},
+    "orange": {"exclude": ["gaseosa", "soda", "drink", "jugo", "juice", "sabor", "flavour", "flavor", "vodka", "gin", "licor", "liquor", "whisky", "whiskey", "ron", "rum", "cerveza", "beer", "aperitivo", "cocktail", "coctel", "fernet", "sidra", "cider", "energizante", "energy"]},
     "chicken": {"exclude": ["sabor", "flavour", "flavor", "caldo", "broth", "pet", "mascota"]},
     "beef": {"exclude": ["sabor", "flavour", "flavor", "caldo", "broth", "pet", "mascota"]},
     "milk": {"exclude": ["corporal", "body", "locion", "lotion", "crema", "cream", "cosmetic"]},

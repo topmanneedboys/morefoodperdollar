@@ -52,6 +52,7 @@ def fixture_records() -> list[dict[str, object]]:
         item("apple-juice", "Jugo de Manzana 1 L", "1", "l", form="juice"),
         item("orange", "Naranja Fresca 1 kg", "1", "kg", form="fresh"),
         item("orange-soda", "Gaseosa Naranja 2 L", "2", "l", form="soda"),
+        item("orange-vodka", "Vodka Orange 700 ml", "700", "ml"),
         item("chicken", "Pollo Fresco 1 kg", "1", "kg", form="fresh"),
         item("chicken-broth", "Caldo Sabor Pollo 1 L", "1", "l", form="broth"),
         item("milk-cosmetic", "Crema Corporal 250 ml", "250", "ml", form="cosmetic"),
@@ -131,6 +132,7 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
         trap_queries = (
             "apple juice 1l",
             "orange soda 2l",
+            "orange vodka 700ml",
             "chicken flavour 1kg",
             "chicken broth 1l",
             "milk cosmetics 250ml",
