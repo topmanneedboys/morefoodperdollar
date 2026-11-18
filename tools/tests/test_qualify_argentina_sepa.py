@@ -149,7 +149,9 @@ class ArgentinaSepaQualificationTest(unittest.TestCase):
     def test_unit_aliases_are_explicit_and_unknown_stays_unknown(self):
         self.assertEqual(("GRAM", 500), parse_quantity("500", "GRM"))
         self.assertEqual(("GRAM", 1000), parse_quantity("1", "KG"))
+        self.assertEqual(("GRAM", 1000), parse_quantity("1", "KGM"))
         self.assertEqual(("MILLILITRE", 473), parse_quantity("473", "ml"))
+        self.assertEqual(("MILLILITRE", 250), parse_quantity("250", "CMQ"))
         self.assertEqual(("MILLILITRE", 1000), parse_quantity("1", "ltr"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UNI"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UD"))
