@@ -758,7 +758,8 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
         "detergente", "limpiador", "lavandina", "desinfectante", "jabon",
         "shampoo", "acondicionador", "crema", "gel", "aromatizante",
         "lavavajillas", "suavizante", "quitamanchas", "limpia", "piso",
-        "ropa", "bano",
+        "ropa", "bano", "gaseosa", "soda", "agua saborizada", "refresco",
+        "energizante", "zumo", "nectar", "bebida",
     ),
 })
 
