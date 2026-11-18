@@ -1180,7 +1180,7 @@ SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
     SubcategoryRule("hats", "clothing", "Gorros y sombreros", "Hats", (
         "gorro", "gorros", "sombrero", "sombreros", "visera", "gorra",
     ), priority=20),
-    SubcategoryRule("bags", "clothing", "Bolsos y mochilas", "Bags", (
+    SubcategoryRule("handbags", "clothing", "Bolsos y mochilas", "Bags", (
         "cartera", "carteras", "mochila", "mochilas", "bolso", "bolsos",
         "rinonera", "riñonera", "valija",
     ), priority=20),
@@ -1220,7 +1220,7 @@ SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
 
 # Specific children outrank the broad "accessories"/"computing" siblings when
 # both match the same name.
-_SPECIFIC_SUBCATEGORY_PRIORITY = {"underwear", "socks", "hats", "bags", "printers"}
+_SPECIFIC_SUBCATEGORY_PRIORITY = {"underwear", "socks", "hats", "handbags", "printers"}
 SUBCATEGORY_RULES = tuple(
     replace(rule, priority=25) if rule.key in _SPECIFIC_SUBCATEGORY_PRIORITY else rule
     for rule in SUBCATEGORY_RULES
@@ -1341,6 +1341,145 @@ SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
         "pintura", "latex", "esmalte sintetico", "barniz", "rodillo",
     ), priority=20),
 )
+
+# Sixth subcategory batch (2026-11-18): crosses the 200-child target.
+SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
+    SubcategoryRule("cider", "beverages", "Sidras", "Cider", (
+        "sidra", "sidras",
+    ), priority=25),
+    SubcategoryRule("vermouth", "beverages", "Vermuts", "Vermouth", (
+        "vermut", "vermout", "vermuts",
+    ), priority=25),
+    SubcategoryRule("sparkling_water", "beverages", "Agua con gas", "Sparkling water", (
+        "agua con gas", "agua gasificada", "agua mineral con gas",
+    ), priority=25),
+    SubcategoryRule("flavored_water", "beverages", "Agua saborizada", "Flavored water", (
+        "agua saborizada", "agua con sabor", "agua de sabor",
+    ), priority=25),
+    SubcategoryRule("cream_cheese", "dairy", "Quesos untables", "Cream cheese", (
+        "queso crema", "queso untable", "queso blanco", "filadelfia",
+    ), priority=25),
+    SubcategoryRule("powdered_milk", "dairy", "Leche en polvo", "Powdered milk", (
+        "leche en polvo", "leche evaporada", "leche condensada",
+    ), priority=25),
+    SubcategoryRule("yogurt_drink", "dairy", "Yogures bebibles", "Drinkable yogurt", (
+        "yogur bebible", "yogurt bebible", "bebible",
+    ), priority=25),
+    SubcategoryRule("ground_meat", "meat_seafood", "Carne picada", "Ground meat", (
+        "carne picada", "picada", "carne molida",
+    ), priority=25),
+    SubcategoryRule("offal", "meat_seafood", "Achuras", "Offal", (
+        "higado", "hígado", "chinchulin", "chinchulín", "mondongo", "rinon",
+        "riñon", "lengua", "molleja",
+    ), priority=20),
+    SubcategoryRule("oats", "staples", "Avena", "Oats", (
+        "avena", "avena instantanea", "avena arrollada",
+    ), priority=20),
+    SubcategoryRule("seeds", "staples", "Semillas", "Seeds", (
+        "chia", "chía", "lino", "sesamo", "sésamo", "girasol", "semillas",
+    ), priority=20),
+    SubcategoryRule("couscous", "staples", "Cuscús", "Couscous", (
+        "couscous", "cus cus", "cuscus",
+    ), priority=20),
+    SubcategoryRule("soup", "staples", "Sopas", "Soup", (
+        "sopa", "sopas", "sopa instantanea", "sopa de sobre",
+    ), priority=25),
+    SubcategoryRule("baking", "staples", "Repostería", "Baking", (
+        "polvo de hornear", "bicarbonato", "levadura quimica", "esencia de vainilla",
+    ), priority=20),
+    SubcategoryRule("dressings", "condiments", "Aderezos", "Dressings", (
+        "aderezo", "aderezos", "cesar", "ranch", "vinagreta",
+    ), priority=20),
+    SubcategoryRule("hot_sauce", "condiments", "Salsas picantes", "Hot sauce", (
+        "picante", "tabasco", "salsa picante", "aji picante",
+    ), priority=20),
+    SubcategoryRule("peanut_butter", "condiments", "Mantequilla de maní", "Peanut butter", (
+        "mantequilla de mani", "manteca de mani", "peanut butter",
+    ), priority=20),
+    SubcategoryRule("honey", "condiments", "Miel", "Honey", (
+        "miel", "miel de abeja", "miel pura",
+    ), priority=20),
+    SubcategoryRule("pickles", "condiments", "Encurtidos", "Pickles", (
+        "pickles", "pepinillo", "pepinillos", "encurtido", "encurtidos",
+    ), priority=20),
+    SubcategoryRule("popcorn", "snacks_sweets", "Pochoclo", "Popcorn", (
+        "pochoclo", "pochoclos", "palomitas", "pop corn",
+    ), priority=20),
+    SubcategoryRule("chewing_gum", "snacks_sweets", "Chicles", "Chewing gum", (
+        "chicle", "chicles", "goma de mascar",
+    ), priority=20),
+    SubcategoryRule("dried_fruit", "snacks_sweets", "Frutas secas", "Dried fruit", (
+        "pasas", "orejones", "fruta deshidratada", "higos secos", "ciruelas secas",
+    ), priority=20),
+    SubcategoryRule("crackers", "snacks_sweets", "Galletitas de agua", "Crackers", (
+        "cracker", "crackers", "galletita de agua", "galletitas de agua",
+    ), priority=25),
+    SubcategoryRule("matches", "household_cleaning", "Fósforos", "Matches", (
+        "fosforo", "fósforo", "fosforos", "fósforos", "cerillas",
+    ), priority=20),
+    SubcategoryRule("batteries", "electronics", "Pilas y baterías", "Batteries", (
+        "pilas", "pila", "bateria", "baterías", "baterias",
+    ), priority=20),
+    SubcategoryRule("fragrances", "personal_care", "Perfumes", "Fragrances", (
+        "perfume", "perfumes", "colonia", "eau de toilette", "splash",
+    ), priority=20),
+    SubcategoryRule("bar_soap", "personal_care", "Jabones de tocador", "Bar soap", (
+        "jabon de tocador", "jabon blanco", "jabon de glicerina", "jabon liquido",
+    ), priority=20),
+    SubcategoryRule("cotton", "personal_care", "Algodón", "Cotton", (
+        "algodon hidrofilo", "algodón hidrófilo", "bolas de algodon", "hisopos",
+    ), priority=20),
+    SubcategoryRule("pacifiers", "baby_pet", "Chupetes", "Pacifiers", (
+        "chupete", "chupetes", "mordillo",
+    ), priority=20),
+    SubcategoryRule("baby_bottles", "baby_pet", "Mamaderas", "Baby bottles", (
+        "mamadera", "mamaderas", "biberon", "biberón", "biberones",
+    ), priority=20),
+    SubcategoryRule("rugs", "home_goods", "Alfombras", "Rugs", (
+        "alfombra", "alfombras", "tapete", "felpudo",
+    ), priority=20),
+    SubcategoryRule("clocks", "home_goods", "Relojes", "Clocks", (
+        "reloj", "relojes", "despertador", "despertadores",
+    ), priority=20),
+    SubcategoryRule("kitchen_utensils", "home_goods", "Utensilios", "Kitchen utensils", (
+        "rallador", "pelador", "abrelatas", "batidor", "espumadera",
+        "cuchara de madera", "sacacorchos",
+    ), priority=20),
+    SubcategoryRule("skirts", "clothing", "Polleras", "Skirts", (
+        "pollera", "polleras", "falda", "faldas",
+    ), priority=25),
+    SubcategoryRule("scarves", "clothing", "Bufandas", "Scarves", (
+        "bufanda", "bufandas", "panuelo", "pañuelo",
+    ), priority=20),
+    SubcategoryRule("belts", "clothing", "Cinturones", "Belts", (
+        "cinturon", "cinturones", "tiradores",
+    ), priority=20),
+    SubcategoryRule("gloves", "clothing", "Guantes", "Gloves", (
+        "guante", "guantes", "mitones",
+    ), priority=20),
+    SubcategoryRule("pajamas", "clothing", "Pijamas", "Pajamas", (
+        "pijama", "pijamas", "camison", "camisón",
+    ), priority=20),
+    SubcategoryRule("board_games", "toys_games", "Juegos de mesa", "Board games", (
+        "juego de mesa", "juegos de mesa", "ludo", "ajedrez", "damero",
+    ), priority=20),
+    SubcategoryRule("office_supplies", "stationery", "Librería", "Office supplies", (
+        "abrochadora", "clip", "clips", "cinta adhesiva", "post it", "sobre",
+        "sobres", "perforadora",
+    ), priority=20),
+    SubcategoryRule("books", "stationery", "Libros", "Books", (
+        "libro", "libros", "novela", "diccionario", "agenda",
+    ), priority=20),
+    SubcategoryRule("plumbing", "tools_hardware", "Plomería", "Plumbing", (
+        "canilla", "griferia", "grifería", "tubo", "caño", "cano", "sifon",
+        "sifón", "llave de paso",
+    ), priority=20),
+    SubcategoryRule("electrical", "tools_hardware", "Electricidad", "Electrical", (
+        "enchufe", "tomacorriente", "interruptor", "portalampara",
+        "cable de luz", "disyuntor",
+    ), priority=20),
+)
+
 
 
 
