@@ -443,6 +443,41 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Batch 2026-11-18: shopper-query vocabulary gaps found by the relevance set.
+# Additive and revertible; no existing term or exclusion is removed.
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "dairy": _REVIEW_BATCH_DEPARTMENT_TERMS["dairy"] + ("crema",),
+    "staples": _REVIEW_BATCH_DEPARTMENT_TERMS["staples"] + (
+        "garbanzos", "garbanzo", "porotos", "poroto", "avena", "polenta", "quinoa",
+    ),
+    "snacks_sweets": _REVIEW_BATCH_DEPARTMENT_TERMS["snacks_sweets"] + (
+        "caramelos", "caramelo", "golosinas", "chicles", "chicle",
+    ),
+    "household_cleaning": _REVIEW_BATCH_DEPARTMENT_TERMS["household_cleaning"] + (
+        "jabon", "jabón", "bolsas", "bolsa", "papel de cocina", "servilletas",
+    ),
+    "personal_care": _REVIEW_BATCH_DEPARTMENT_TERMS["personal_care"] + (
+        "dentifrico", "dentífrico", "hilo dental",
+    ),
+    "baby_pet": _REVIEW_BATCH_DEPARTMENT_TERMS["baby_pet"] + (
+        "panales", "pañales", "toallitas", "alimento para perros", "alimento para gatos",
+    ),
+    "health_supplements": _REVIEW_BATCH_DEPARTMENT_TERMS["health_supplements"] + (
+        "ibuprofeno", "paracetamol", "aspirina", "analgesico", "analgésico", "vitamina c",
+    ),
+    "prepared_food": _REVIEW_BATCH_DEPARTMENT_TERMS["prepared_food"] + (
+        "empanada", "empanadas",
+    ),
+})
+_REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
+    "dairy": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS["dairy"] + (
+        "dental", "facial", "corporal", "manos", "cosmetic", "shampoo",
+    ),
+    "household_cleaning": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get("household_cleaning", ()) + (
+        "tocador",
+    ),
+})
+
 
 def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
     terms = tuple(dict.fromkeys(rule.terms + _REVIEW_BATCH_DEPARTMENT_TERMS.get(rule.key, ())))
