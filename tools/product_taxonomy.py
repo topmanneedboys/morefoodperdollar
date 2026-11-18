@@ -478,6 +478,109 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
     ),
 })
 
+# Batch 2026-11-18 (b): unambiguous product-type words for the departments
+# that dominate the review queue. Ambiguous words (goma, papel, plancha,
+# bateria, cable) stay out and remain review-required.
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "clothing": _REVIEW_BATCH_DEPARTMENT_TERMS["clothing"] + (
+        "remera", "remeras", "buzo", "buzos", "pantalon", "pantalones", "camisa",
+        "camisas", "campera", "camperas", "chaleco", "chalecos", "pollera",
+        "polleras", "vestido", "vestidos", "short", "shorts", "pijama", "pijamas",
+        "zapatilla", "zapatillas", "sandalia", "sandalias", "cartera", "carteras",
+        "mochila", "mochilas", "cinturon", "cinturones", "corbata", "gorro",
+        "gorros", "bufanda", "bufandas", "malla", "mallas", "musculosa",
+        "musculosas", "camison", "camisones",
+    ),
+    "home_goods": _REVIEW_BATCH_DEPARTMENT_TERMS["home_goods"] + (
+        "sarten", "sartenes", "olla", "ollas", "cacerola", "cacerolas",
+        "bandeja", "bandejas", "taza", "tazas", "vaso", "vasos", "plato",
+        "platos", "cubierto", "cubiertos", "cuchillo", "cuchillos", "tenedor",
+        "tenedores", "cuchara", "cucharas", "mantel", "manteles", "repasador",
+        "repasadores", "sabana", "sabanas", "almohada", "almohadas", "acolchado",
+        "alfombra", "alfombras", "cesto", "cestos", "esponja", "esponjas",
+        "trapo", "trapos", "jarra", "jarras", "pava", "pavas", "florero",
+        "floreros", "portarretrato", "espejo", "espejos",
+    ),
+    "toys_games": _REVIEW_BATCH_DEPARTMENT_TERMS["toys_games"] + (
+        "peluche", "peluches", "muneca", "munecas", "autito", "autitos",
+        "bloques", "rompecabezas", "puzzle", "puzzles", "pelota", "pelotas",
+        "bicicleta", "bicicletas", "patineta", "juguete", "juguetes", "globo",
+        "globos", "disfraz", "disfraces", "didactico", "didacticos",
+    ),
+    "stationery": _REVIEW_BATCH_DEPARTMENT_TERMS["stationery"] + (
+        "cuaderno", "cuadernos", "lapiz", "lapices", "lapicera", "lapiceras",
+        "birome", "biromes", "marcador", "marcadores", "resaltador",
+        "resaltadores", "regla", "reglas", "tijera", "tijeras", "cartulina",
+        "cartulinas", "carpeta", "carpetas",
+    ),
+    "electronics": _REVIEW_BATCH_DEPARTMENT_TERMS["electronics"] + (
+        "auricular", "auriculares", "cargador", "cargadores", "parlante",
+        "parlantes", "televisor", "televisores", "heladera", "heladeras",
+        "lavarropas", "freidora", "freidoras",
+    ),
+    "tools_hardware": _REVIEW_BATCH_DEPARTMENT_TERMS["tools_hardware"] + (
+        "destornillador", "destornilladores", "martillo", "martillos", "pinza",
+        "pinzas", "taladro", "taladros", "sierra", "sierras", "clavos",
+        "tornillos", "llave inglesa",
+    ),
+    "baby_pet": _REVIEW_BATCH_DEPARTMENT_TERMS["baby_pet"] + (
+        "cuna", "cunas", "cochecito", "cochecitos", "sillita", "sillitas",
+    ),
+    "health_supplements": _REVIEW_BATCH_DEPARTMENT_TERMS["health_supplements"] + (
+        "curita", "curitas", "termometro", "vitamina", "vitaminas",
+    ),
+    "personal_care": _REVIEW_BATCH_DEPARTMENT_TERMS["personal_care"] + (
+        "afeitadora", "maquina de afeitar", "tampon", "tampones", "jabon liquido",
+    ),
+})
+
+# Batch 2026-11-18 (c): generic terms mined from the classified corpus at
+# >=92% department purity. Brand tokens and colours are deliberately excluded;
+# only product-type words are promoted.
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "beverages": _REVIEW_BATCH_DEPARTMENT_TERMS["beverages"] + (
+        "tinto", "brut", "lager", "saquitos", "multifruta", "syrah", "merlot",
+        "torrontes", "pinot", "sauvignon", "cabernet", "espumante",
+    ),
+    "clothing": _REVIEW_BATCH_DEPARTMENT_TERMS["clothing"] + (
+        "estampada", "estampadas", "estampa", "jersey", "denim", "oversize",
+        "manga", "bolsillo", "frisa", "acordonada", "acordonadas", "cuello",
+    ),
+    "electronics": _REVIEW_BATCH_DEPARTMENT_TERMS["electronics"] + (
+        "qled", "earbud", "earbuds", "helad", "android", "gafa", "gafas",
+    ),
+    "dairy": _REVIEW_BATCH_DEPARTMENT_TERMS["dairy"] + (
+        "lactosa", "descremada", "gouda", "brie", "fontina", "camembert",
+        "sardo", "cremon", "horma",
+    ),
+    "staples": _REVIEW_BATCH_DEPARTMENT_TERMS["staples"] + (
+        "spaghetti", "fusilli", "penne", "mostachol", "mostacholes",
+        "tirabuzon", "alubia", "alubias", "leudante", "semola", "parboil",
+        "rigate", "pancho", "panchos",
+    ),
+    "household_cleaning": _REVIEW_BATCH_DEPARTMENT_TERMS["household_cleaning"] + (
+        "desinf", "vidrios", "residuo", "residuos", "felpita", "virulana",
+    ),
+    "meat_seafood": _REVIEW_BATCH_DEPARTMENT_TERMS["meat_seafood"] + (
+        "picado", "vacuna", "lomitos", "novillo",
+    ),
+    "personal_care": _REVIEW_BATCH_DEPARTMENT_TERMS["personal_care"] + (
+        "ceramidas",
+    ),
+    "condiments": _REVIEW_BATCH_DEPARTMENT_TERMS["condiments"] + (
+        "virgen", "edul",
+    ),
+    "fresh_produce": _REVIEW_BATCH_DEPARTMENT_TERMS["fresh_produce"] + (
+        "hidroponica", "mantecosa", "perita",
+    ),
+    "toys_games": _REVIEW_BATCH_DEPARTMENT_TERMS["toys_games"] + (
+        "cartas",
+    ),
+    "sports_luggage": _REVIEW_BATCH_DEPARTMENT_TERMS["sports_luggage"] + (
+        "rigida", "rigidas",
+    ),
+})
+
 
 def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
     terms = tuple(dict.fromkeys(rule.terms + _REVIEW_BATCH_DEPARTMENT_TERMS.get(rule.key, ())))
