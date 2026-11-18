@@ -682,6 +682,23 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
     ),
 })
 
+# Batch 2026-11-18 (f): childless subcategory clusters.
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "dairy": _REVIEW_BATCH_DEPARTMENT_TERMS["dairy"] + ("huevo", "huevos"),
+    "condiments": _REVIEW_BATCH_DEPARTMENT_TERMS["condiments"] + ("aceituna", "aceitunas"),
+    "snacks_sweets": _REVIEW_BATCH_DEPARTMENT_TERMS["snacks_sweets"] + (
+        "barra de cereal", "cereal bar", "pasta frola", "pastafrola",
+    ),
+    "prepared_food": _REVIEW_BATCH_DEPARTMENT_TERMS["prepared_food"] + (
+        "hamburguesa", "hamburguesas",
+    ),
+})
+_REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
+    "dairy": _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS["dairy"] + (
+        "pascua", "chocolate", "juguete", "sorpresa",
+    ),
+})
+
 
 def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
     terms = tuple(dict.fromkeys(rule.terms + _REVIEW_BATCH_DEPARTMENT_TERMS.get(rule.key, ())))
@@ -1068,6 +1085,50 @@ SUBCATEGORY_RULES = tuple(
     )
     for rule in SUBCATEGORY_RULES
 )
+
+# Third subcategory batch (2026-11-18): clusters still childless after the
+# first two batches, plus term extensions for existing children.
+SUBCATEGORY_RULES = SUBCATEGORY_RULES + (
+    SubcategoryRule("printers", "electronics", "Impresoras", "Printers", (
+        "impresora", "impresoras", "multifuncion", "multifunción", "tinta",
+        "toner", "toner",
+    ), priority=20),
+    SubcategoryRule("eggs", "dairy", "Huevos", "Eggs", (
+        "huevo", "huevos", "maple de huevos", "docena de huevos",
+    ), priority=25),
+    SubcategoryRule("burgers", "prepared_food", "Hamburguesas", "Burgers", (
+        "hamburguesa", "hamburguesas", "medallon", "medallones", "burger",
+    ), priority=20),
+    SubcategoryRule("olives", "condiments", "Aceitunas", "Olives", (
+        "aceituna", "aceitunas", "oliva verde", "olivas",
+    ), priority=20),
+    SubcategoryRule("cereal_bars", "snacks_sweets", "Barras de cereal", "Cereal bars", (
+        "barra de cereal", "barras de cereal", "cereal bar", "cereal bars",
+    ), priority=20),
+    SubcategoryRule("pasta_frola", "snacks_sweets", "Pastafrola", "Pasta frola", (
+        "pasta frola", "pastafrola", "frola",
+    ), priority=20),
+)
+
+_SUBCATEGORY_TERM_EXTENSIONS: dict[str, tuple[str, ...]] = {
+    "kitchen_accessories": (
+        "tabla", "tabla de picar", "tabla de corte", "posa", "posa fuente",
+        "esqueleto", "jarro", "mug", "bowl",
+    ),
+    "tableware": ("jarro", "mug", "taza de cafe"),
+    "bedding": ("relleno", "almohadon", "almohadón", "funda"),
+    "bottoms": ("pant",),
+    "cleaning_tools": ("porta rollo",),
+    "paper": ("rollo", "bull roll", "rollo de cocina", "porta rollo"),
+    "phones": ("cel",),
+    "small_appliances": ("cocina elec", "horno elect", "cocina electrica"),
+    "dulces": ("dce", "batata", "membrillo", "dulce de batata", "dulce de membrillo"),
+}
+SUBCATEGORY_RULES = tuple(
+    replace(rule, terms=rule.terms + _SUBCATEGORY_TERM_EXTENSIONS.get(rule.key, ()))
+    for rule in SUBCATEGORY_RULES
+)
+
 
 
 
