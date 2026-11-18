@@ -505,6 +505,21 @@ class BackendService:
         value["productionAndroidUiAuthorized"] = _production_android_ui_authorized(value)
         return value
 
+    def categories(self) -> dict[str, Any]:
+        """Return the observed category tree and counts for the pinned release."""
+
+        handle = self.release_manager.pin(require_fresh=True)
+        taxonomy = self._taxonomy(handle)
+        if taxonomy is None:
+            raise BackendQueryError("CATEGORY_TAXONOMY_UNAVAILABLE")
+        return {
+            "apiContractVersion": "valuepilot-argentina-categories-v1",
+            "releaseId": handle.release_id,
+            "releaseDate": handle.release_date,
+            "freshness": handle.freshness_status,
+            **taxonomy.category_counts(),
+        }
+
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()

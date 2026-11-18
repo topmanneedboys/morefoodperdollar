@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import gzip
+import json
 import os
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -372,6 +376,39 @@ class SearchEvidenceTests(unittest.TestCase):
             })
 
         self.assertEqual(reader.args[0], "naranja")
+
+    def test_categories_reads_the_taxonomy_sidecar_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "taxonomy.jsonl.gz"
+            record = {
+                "providerProductId": "1",
+                "identityKeys": ["ar-sepa-product:1:1"],
+                "taxonomy": {
+                    "coverageStatus": "CLASSIFIED",
+                    "primaryDepartment": "dairy",
+                    "primarySubcategory": "milk",
+                    "departmentCandidates": [
+                        {"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}
+                    ],
+                    "subcategoryCandidates": [
+                        {"key": "milk", "labelEs": "Leches", "labelEn": "Milk"}
+                    ],
+                },
+            }
+            with gzip.open(path, "wt", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            service = BackendService(
+                str(Path(directory)),
+                release_manager=self._ReleaseManager(),
+                taxonomy_index_path=path,
+            )
+
+            result = service.categories()
+
+            self.assertEqual(result["departments"][0]["key"], "dairy")
+            self.assertEqual(result["departments"][0]["labelEs"], "Lácteos")
+            self.assertEqual(result["subcategories"][0]["key"], "milk")
+            self.assertEqual(result["productsWithSubcategory"], 1)
 
     def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
         from backend.service import _search_facets

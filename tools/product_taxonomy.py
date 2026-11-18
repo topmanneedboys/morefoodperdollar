@@ -124,6 +124,63 @@ class ProductTaxonomyIndex:
     def record_count(self) -> int:
         return len({id(value) for value in self._records.values()})
 
+    def category_counts(self) -> dict[str, Any]:
+        """Return the observed category tree with catalogue counts.
+
+        Only primary assignments are counted, and labels come from the
+        artifact's own candidates, so the API never invents a category.
+        """
+
+        departments: Counter[str] = Counter()
+        subcategories: Counter[str] = Counter()
+        department_labels: dict[str, tuple[str, str]] = {}
+        subcategory_labels: dict[str, tuple[str, str]] = {}
+        seen: set[int] = set()
+        for record in self._records.values():
+            if id(record) in seen:
+                continue
+            seen.add(id(record))
+            taxonomy = record.get("taxonomy") if isinstance(record, Mapping) else None
+            if not isinstance(taxonomy, Mapping):
+                continue
+            primary = taxonomy.get("primaryDepartment")
+            if isinstance(primary, str):
+                departments[primary] += 1
+            for item in taxonomy.get("departmentCandidates") or ():
+                if isinstance(item, Mapping) and isinstance(item.get("key"), str):
+                    department_labels.setdefault(
+                        item["key"],
+                        (str(item.get("labelEs") or item["key"]), str(item.get("labelEn") or item["key"])),
+                    )
+            subcategory = taxonomy.get("primarySubcategory")
+            if isinstance(subcategory, str):
+                subcategories[subcategory] += 1
+            for item in taxonomy.get("subcategoryCandidates") or ():
+                if isinstance(item, Mapping) and isinstance(item.get("key"), str):
+                    subcategory_labels.setdefault(
+                        item["key"],
+                        (str(item.get("labelEs") or item["key"]), str(item.get("labelEn") or item["key"])),
+                    )
+
+        def entries(
+            counter: Counter[str],
+            labels: Mapping[str, tuple[str, str]],
+            limit: int,
+        ) -> list[dict[str, Any]]:
+            values: list[dict[str, Any]] = []
+            for key, count in counter.most_common(limit):
+                label_es, label_en = labels.get(key, (key, key))
+                values.append({"key": key, "labelEs": label_es, "labelEn": label_en, "count": count})
+            return values
+
+        return {
+            "departments": entries(departments, department_labels, 30),
+            "subcategories": entries(subcategories, subcategory_labels, 300),
+            "productsWithDepartment": sum(departments.values()),
+            "productsWithSubcategory": sum(subcategories.values()),
+            "records": len(self._records),
+        }
+
     def taxonomy_for(self, candidate: Mapping[str, Any]) -> Mapping[str, Any] | None:
         provider_id = candidate.get("providerProductId")
         if isinstance(provider_id, str) and provider_id.strip():
