@@ -32,6 +32,9 @@ try:
         ParsedIntent,
         apply_candidate_horizon_guard,
         parse_intent,
+        default_vocabulary,
+        intent_excluded_terms,
+        name_matches_excluded_form,
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
@@ -54,6 +57,9 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
         ParsedIntent,
         apply_candidate_horizon_guard,
         parse_intent,
+        default_vocabulary,
+        intent_excluded_terms,
+        name_matches_excluded_form,
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
@@ -81,6 +87,40 @@ MAX_DISCOVERY_OFFERS_TOTAL = 128
 MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
 MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
 MAX_SMALL_CATALOG_FALLBACK_RECORDS = 2_048
+
+# Provider reference-price units, as observed in the SEPA columns
+# ``productos_unidad_medida_referencia``.  Only these canonical bases may be
+# displayed; any other raw unit leaves the reference price unknown.
+_REFERENCE_UNIT_LABELS = {
+    "l": "l",
+    "lt": "l",
+    "lts": "l",
+    "ltr": "l",
+    "litro": "l",
+    "litros": "l",
+    "ml": "ml",
+    "mls": "ml",
+    "cc": "ml",
+    "cm3": "ml",
+    "cmq": "ml",
+    "kg": "kg",
+    "kgs": "kg",
+    "kilo": "kg",
+    "kilos": "kg",
+    "kilogramo": "kg",
+    "kilogramos": "kg",
+    "g": "g",
+    "gr": "g",
+    "grs": "g",
+    "grm": "g",
+    "gramo": "g",
+    "gramos": "g",
+    "un": "count",
+    "uni": "count",
+    "unidad": "count",
+    "unidades": "count",
+    "u": "count",
+}
 
 
 class BackendQueryError(ValueError):
@@ -764,6 +804,26 @@ class ArgentinaBackendReader:
     ) -> tuple[Mapping[str, Any], ...]:
         """Read one bounded regional identity window in stable order."""
 
+        # Apply the same product-form exclusions the interpreter uses: a bare
+        # "orange" query must not surface a flavoured spirit just because the
+        # brand name contains the word. Terms the shopper explicitly typed are
+        # kept, so "vodka orange" still searches vodka.
+        vocabulary = default_vocabulary()
+        normalized_query = input_normalize_text(query, max_length=512)
+        intent: ParsedIntent | None = None
+        exclusions: tuple[str, ...] = ()
+        try:
+            intent = parse_intent(query, data=vocabulary)
+        except InputIntelligenceError:
+            exclusions = ()
+        else:
+            exclusions = tuple(
+                term
+                for term in intent_excluded_terms(intent, data=vocabulary)
+                if input_normalize_text(term, max_length=128) not in normalized_query
+            )
+        window = product_limit
+
         search_started = time.perf_counter()
         searchpack = self._searchpack_for_region(region_id)
         if searchpack is not None:
@@ -771,7 +831,7 @@ class ArgentinaBackendReader:
             try:
                 ranked = searchpack.region(region_id).search_many(
                     (query,),
-                    product_limit=product_limit,
+                    product_limit=window,
                     candidate_bound=MAX_CANDIDATES,
                     stats=stats,
                 )
@@ -795,7 +855,7 @@ class ArgentinaBackendReader:
                     _raw, scored = _search_candidates_many(
                         contract,
                         (query,),
-                        product_limit=product_limit,
+                        product_limit=window,
                         max_candidates=MAX_CANDIDATES,
                     )
                 except (ArgentinaSepaQueryError, ValueError, OSError) as exc:
@@ -805,7 +865,15 @@ class ArgentinaBackendReader:
                     discovery_cache.popitem(last=False)
                 discovery_cache[cache_key] = values
         metrics.regional_search_ms += (time.perf_counter() - search_started) * 1000
-        return tuple(value if isinstance(value, Mapping) else {} for value in values)
+        projected = tuple(value if isinstance(value, Mapping) else {} for value in values)
+        if not exclusions or intent is None:
+            return projected
+        filtered = tuple(
+            value
+            for value in projected
+            if not name_matches_excluded_form(value.get("name"), value.get("brand"), intent, data=vocabulary)
+        )
+        return filtered[:product_limit]
 
     def _discover_ranked_values(
         self,
@@ -906,6 +974,43 @@ class ArgentinaBackendReader:
             return False
         return observed.dimension == expected.dimension and observed.base_amount == expected.base_amount
 
+    @staticmethod
+    def _reference_unit_price(reference: Any) -> dict[str, str] | None:
+        """Project the provider's own reference price without inventing a basis.
+
+        SEPA carries ``productos_precio_referencia`` together with its
+        reference quantity and unit.  That is a provider-stated unit price, so
+        it is projected only when the amount and a canonical basis are both
+        valid, and it stays labelled as a reference rather than a computed
+        current-offer price.
+        """
+
+        if not isinstance(reference, Mapping):
+            return None
+        amount = reference.get("amount")
+        currency = reference.get("currency")
+        raw_quantity = reference.get("quantityRaw")
+        raw_unit = reference.get("unitRaw")
+        if not isinstance(amount, str) or not amount or not isinstance(currency, str) or not currency:
+            return None
+        if not isinstance(raw_quantity, str) or not isinstance(raw_unit, str):
+            return None
+        basis_unit = _REFERENCE_UNIT_LABELS.get(raw_unit.strip().casefold())
+        if basis_unit is None:
+            return None
+        try:
+            quantity = Decimal(raw_quantity.strip().replace(",", "."))
+        except (ArithmeticError, ValueError):
+            return None
+        if quantity <= 0:
+            return None
+        return {
+            "amount": amount,
+            "currency": currency,
+            "basis": f"{decimal_text(quantity)} {basis_unit}",
+            "source": "PROVIDER_REFERENCE",
+        }
+
     @classmethod
     def _public_search_offer(
         cls,
@@ -941,6 +1046,7 @@ class ArgentinaBackendReader:
             "quantity": product.get("quantity"),
             "quantityStatus": product.get("quantityStatus"),
             "unitPrice": cls._search_unit_price(product, offer),
+            "referenceUnitPrice": cls._reference_unit_price(offer.get("referencePrice")),
             "releaseDate": offer.get("releaseDate"),
             "freshnessStatus": offer.get("freshnessStatus"),
             "availability": "UNKNOWN",

@@ -8,9 +8,10 @@ import os
 import time
 import uuid
 import threading
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .reader import (
     MAX_DISCOVERY_PRODUCT_LIMIT,
@@ -62,6 +63,8 @@ _FAMILY_DISCOVERY_QUERIES = {
     "egg": "huevo",
     "carrot": "carrot",
     "strawberry": "frutilla",
+    "orange": "naranja",
+    "apple": "manzana",
     "mango": "mango",
     "alfajor": "alfajor",
     "flour": "harina",
@@ -104,6 +107,100 @@ def _candidate_evidence_sort_key(candidate: Mapping[str, Any]) -> tuple[int, int
         for offer in offers
     )
     return (0 if has_unit_price else 1, 0 if offers else 1)
+
+
+def _money_text(value: Decimal) -> str:
+    return format(value.normalize(), "f")
+
+
+def _search_facets(candidates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize the bounded result window into eBay-style filter counts.
+
+    Facets are derived only from the already-selected identity window.  They
+    never invent a brand, size, store or price, and they never change ranking
+    or price authority.
+    """
+
+    departments: Counter[str] = Counter()
+    department_labels: dict[str, tuple[str, str]] = {}
+    subcategories: Counter[str] = Counter()
+    subcategory_labels: dict[str, tuple[str, str]] = {}
+    brands: Counter[str] = Counter()
+    stores: Counter[str] = Counter()
+    sizes: Counter[str] = Counter()
+    prices: list[Decimal] = []
+    for product in candidates:
+        if not isinstance(product, Mapping):
+            continue
+        taxonomy = product.get("_taxonomy")
+        if isinstance(taxonomy, Mapping):
+            for item in taxonomy.get("departmentCandidates") or ():
+                if not isinstance(item, Mapping) or not isinstance(item.get("key"), str):
+                    continue
+                key = item["key"]
+                department_labels.setdefault(
+                    key,
+                    (str(item.get("labelEs") or key), str(item.get("labelEn") or key)),
+                )
+            for item in taxonomy.get("subcategoryCandidates") or ():
+                if not isinstance(item, Mapping) or not isinstance(item.get("key"), str):
+                    continue
+                key = item["key"]
+                subcategory_labels.setdefault(
+                    key,
+                    (str(item.get("labelEs") or key), str(item.get("labelEn") or key)),
+                )
+            primary = taxonomy.get("primaryDepartment")
+            if isinstance(primary, str):
+                departments[primary] += 1
+            subcategory = taxonomy.get("primarySubcategory")
+            if isinstance(subcategory, str):
+                subcategories[subcategory] += 1
+        brand = product.get("brand")
+        if isinstance(brand, str) and brand.strip():
+            brands[brand.strip()] += 1
+        quantity = product.get("quantity")
+        if isinstance(quantity, Mapping):
+            value = quantity.get("value")
+            unit = quantity.get("unit")
+            if isinstance(value, str) and value and isinstance(unit, str) and unit:
+                sizes[f"{value} {unit}"] += 1
+        offers = product.get("qualifiedOffers")
+        if not isinstance(offers, Sequence) or isinstance(offers, (str, bytes)):
+            continue
+        for offer in offers:
+            if not isinstance(offer, Mapping):
+                continue
+            store = offer.get("storeName")
+            if isinstance(store, str) and store.strip():
+                stores[store.strip()] += 1
+            list_price = offer.get("listPrice")
+            if isinstance(list_price, Mapping):
+                try:
+                    prices.append(Decimal(str(list_price.get("amount"))))
+                except (ArithmeticError, TypeError, ValueError):
+                    continue
+
+    def _entries(counter: Counter[str], labels: Mapping[str, tuple[str, str]] | None = None, limit: int = 20) -> list[dict[str, Any]]:
+        values: list[dict[str, Any]] = []
+        for key, count in counter.most_common(limit):
+            entry: dict[str, Any] = {"key": key, "count": count}
+            if labels is not None and key in labels:
+                entry["labelEs"], entry["labelEn"] = labels[key]
+            values.append(entry)
+        return values
+
+    price_range = None
+    if prices:
+        price_range = {"min": _money_text(min(prices)), "max": _money_text(max(prices)), "currency": "ARS"}
+    return {
+        "departments": _entries(departments, department_labels),
+        "subcategories": _entries(subcategories, subcategory_labels),
+        "brands": _entries(brands),
+        "stores": _entries(stores),
+        "sizes": _entries(sizes),
+        "priceRange": price_range,
+    }
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -678,6 +775,7 @@ class BackendService:
             "correction": None,
             "input": None,
             "clarification": clarification,
+            "facets": _search_facets(candidates[:MAX_DISCOVERY_PRODUCT_LIMIT]),
             "matches": [_strip_internal(value) for value in visible_candidates],
             "pagination": {
                 "page": page,

@@ -295,6 +295,121 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertEqual(projected["storeAddress"], {"street": "Av. Corrientes"})
 
+    def test_public_search_offer_projects_provider_reference_unit_price(self) -> None:
+        offer = {
+            "offerKey": "offer-1",
+            "productEvidenceKey": "product-1",
+            "storeKey": "store-1",
+            "listPrice": {"amount": "9055", "currency": "ARS"},
+            "referencePrice": {
+                "amount": "36220",
+                "currency": "ARS",
+                "quantityRaw": "1",
+                "unitRaw": "ltr",
+                "semanticRole": "reference_price_not_current_offer",
+            },
+            "releaseDate": "2026-11-15",
+            "freshnessStatus": "FRESH",
+            "promotions": [],
+        }
+        product = {
+            "productEvidenceKey": "product-1",
+            "quantity": None,
+            "quantityStatus": "UNKNOWN",
+        }
+
+        projected = ArgentinaBackendReader._public_search_offer(offer, product)
+
+        self.assertIsNone(projected["unitPrice"])
+        self.assertEqual(
+            projected["referenceUnitPrice"],
+            {
+                "amount": "36220",
+                "currency": "ARS",
+                "basis": "1 l",
+                "source": "PROVIDER_REFERENCE",
+            },
+        )
+
+    def test_public_search_offer_rejects_unmapped_reference_units(self) -> None:
+        offer = {
+            "offerKey": "offer-1",
+            "productEvidenceKey": "product-1",
+            "storeKey": "store-1",
+            "listPrice": {"amount": "100", "currency": "ARS"},
+            "referencePrice": {
+                "amount": "500",
+                "currency": "ARS",
+                "quantityRaw": "1",
+                "unitRaw": "furlong",
+                "semanticRole": "reference_price_not_current_offer",
+            },
+            "releaseDate": "2026-11-15",
+            "freshnessStatus": "FRESH",
+            "promotions": [],
+        }
+        product = {
+            "productEvidenceKey": "product-1",
+            "quantity": None,
+            "quantityStatus": "UNKNOWN",
+        }
+
+        projected = ArgentinaBackendReader._public_search_offer(offer, product)
+
+        self.assertIsNone(projected["referenceUnitPrice"])
+
+    def test_bare_orange_query_searches_the_spanish_catalog_term(self) -> None:
+        reader = self._Reader()
+        service = BackendService("", release_manager=self._ReleaseManager())
+        service._reader = lambda _handle: reader
+
+        with patch.dict(os.environ, {}, clear=True):
+            service.search({
+                "latitude": "-34.60",
+                "longitude": "-58.38",
+                "radiusKm": "5",
+                "query": "orange",
+            })
+
+        self.assertEqual(reader.args[0], "naranja")
+
+    def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
+        from backend.service import _search_facets
+
+        candidates = [
+            {
+                "brand": "Marca A",
+                "quantity": {"value": "500", "unit": "g"},
+                "_taxonomy": {
+                    "primaryDepartment": "dairy",
+                    "departmentCandidates": [{"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}],
+                    "primarySubcategory": "milk",
+                    "subcategoryCandidates": [{"key": "milk", "labelEs": "Leches", "labelEn": "Milk"}],
+                },
+                "qualifiedOffers": [
+                    {"storeName": "Store 1", "listPrice": {"amount": "1000", "currency": "ARS"}}
+                ],
+            },
+            {
+                "brand": "Marca B",
+                "quantity": {"value": "1", "unit": "l"},
+                "qualifiedOffers": [
+                    {"storeName": "Store 2", "listPrice": {"amount": "2500", "currency": "ARS"}}
+                ],
+            },
+        ]
+
+        facets = _search_facets(candidates)
+
+        self.assertEqual(
+            facets["departments"],
+            [{"key": "dairy", "count": 1, "labelEs": "Lácteos", "labelEn": "Dairy"}],
+        )
+        self.assertEqual(facets["subcategories"][0]["key"], "milk")
+        self.assertEqual([item["key"] for item in facets["brands"]], ["Marca A", "Marca B"])
+        self.assertEqual([item["key"] for item in facets["stores"]], ["Store 1", "Store 2"])
+        self.assertEqual(facets["priceRange"], {"min": "1000", "max": "2500", "currency": "ARS"})
+
     def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())

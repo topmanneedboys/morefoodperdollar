@@ -1,0 +1,1246 @@
+{
+  "schemaVersion": "valuepilot-argentina-search-relevance-v1",
+  "policyVersion": "valuepilot-argentina-search-relevance-policy-v1",
+  "queries": [
+    {
+      "query": "alimento para gatos",
+      "department": "baby_pet"
+    },
+    {
+      "query": "alimento para perros",
+      "department": "baby_pet"
+    },
+    {
+      "query": "chupete",
+      "department": "baby_pet"
+    },
+    {
+      "query": "formula infantil",
+      "department": "baby_pet"
+    },
+    {
+      "query": "mamadera",
+      "department": "baby_pet"
+    },
+    {
+      "query": "panales",
+      "department": "baby_pet"
+    },
+    {
+      "query": "piedras sanitarias",
+      "department": "baby_pet"
+    },
+    {
+      "query": "toallitas humedas",
+      "department": "baby_pet"
+    },
+    {
+      "query": "agua",
+      "department": "beverages"
+    },
+    {
+      "query": "agua mineral",
+      "department": "beverages"
+    },
+    {
+      "query": "agua saborizada",
+      "department": "beverages"
+    },
+    {
+      "query": "agua tonica",
+      "department": "beverages"
+    },
+    {
+      "query": "cafe",
+      "department": "beverages"
+    },
+    {
+      "query": "cafe en grano",
+      "department": "beverages"
+    },
+    {
+      "query": "cafe molido",
+      "department": "beverages"
+    },
+    {
+      "query": "cerveza",
+      "department": "beverages"
+    },
+    {
+      "query": "cerveza negra",
+      "department": "beverages"
+    },
+    {
+      "query": "cerveza rubia",
+      "department": "beverages"
+    },
+    {
+      "query": "champagne",
+      "department": "beverages"
+    },
+    {
+      "query": "energizante",
+      "department": "beverages"
+    },
+    {
+      "query": "espumante",
+      "department": "beverages"
+    },
+    {
+      "query": "fernet",
+      "department": "beverages"
+    },
+    {
+      "query": "gaseosa",
+      "department": "beverages"
+    },
+    {
+      "query": "gaseosa cola",
+      "department": "beverages"
+    },
+    {
+      "query": "gin",
+      "department": "beverages"
+    },
+    {
+      "query": "jugo",
+      "department": "beverages"
+    },
+    {
+      "query": "jugo de naranja",
+      "department": "beverages"
+    },
+    {
+      "query": "ron",
+      "department": "beverages"
+    },
+    {
+      "query": "sidra",
+      "department": "beverages"
+    },
+    {
+      "query": "te",
+      "department": "beverages"
+    },
+    {
+      "query": "te negro",
+      "department": "beverages"
+    },
+    {
+      "query": "tequila",
+      "department": "beverages"
+    },
+    {
+      "query": "vino",
+      "department": "beverages"
+    },
+    {
+      "query": "vino blanco",
+      "department": "beverages"
+    },
+    {
+      "query": "vino malbec",
+      "department": "beverages"
+    },
+    {
+      "query": "vino rosado",
+      "department": "beverages"
+    },
+    {
+      "query": "vodka",
+      "department": "beverages"
+    },
+    {
+      "query": "whisky",
+      "department": "beverages"
+    },
+    {
+      "query": "yerba mate",
+      "department": "beverages"
+    },
+    {
+      "query": "bufanda",
+      "department": "clothing"
+    },
+    {
+      "query": "buzo",
+      "department": "clothing"
+    },
+    {
+      "query": "camisa",
+      "department": "clothing"
+    },
+    {
+      "query": "campera",
+      "department": "clothing"
+    },
+    {
+      "query": "cartera",
+      "department": "clothing"
+    },
+    {
+      "query": "chaleco",
+      "department": "clothing"
+    },
+    {
+      "query": "cinturon",
+      "department": "clothing"
+    },
+    {
+      "query": "gorro",
+      "department": "clothing"
+    },
+    {
+      "query": "jean",
+      "department": "clothing"
+    },
+    {
+      "query": "medias",
+      "department": "clothing"
+    },
+    {
+      "query": "mochila",
+      "department": "clothing"
+    },
+    {
+      "query": "ojotas",
+      "department": "clothing"
+    },
+    {
+      "query": "pantalon",
+      "department": "clothing"
+    },
+    {
+      "query": "pollera",
+      "department": "clothing"
+    },
+    {
+      "query": "remera",
+      "department": "clothing"
+    },
+    {
+      "query": "sandalias",
+      "department": "clothing"
+    },
+    {
+      "query": "short",
+      "department": "clothing"
+    },
+    {
+      "query": "traje de bano",
+      "department": "clothing"
+    },
+    {
+      "query": "vestido",
+      "department": "clothing"
+    },
+    {
+      "query": "zapatillas",
+      "department": "clothing"
+    },
+    {
+      "query": "aceite",
+      "department": "condiments"
+    },
+    {
+      "query": "aceite de girasol",
+      "department": "condiments"
+    },
+    {
+      "query": "aceite de oliva",
+      "department": "condiments"
+    },
+    {
+      "query": "azucar",
+      "department": "staples"
+    },
+    {
+      "query": "canela",
+      "department": "condiments"
+    },
+    {
+      "query": "comino",
+      "department": "condiments"
+    },
+    {
+      "query": "ketchup",
+      "department": "condiments"
+    },
+    {
+      "query": "mayonesa",
+      "department": "condiments"
+    },
+    {
+      "query": "mostaza",
+      "department": "condiments"
+    },
+    {
+      "query": "nuez moscada",
+      "department": "condiments"
+    },
+    {
+      "query": "oregano",
+      "department": "condiments"
+    },
+    {
+      "query": "pimenton",
+      "department": "condiments"
+    },
+    {
+      "query": "pimienta negra",
+      "department": "condiments"
+    },
+    {
+      "query": "sal",
+      "department": "condiments"
+    },
+    {
+      "query": "sal fina",
+      "department": "condiments"
+    },
+    {
+      "query": "salsa de soja",
+      "department": "condiments"
+    },
+    {
+      "query": "vinagre",
+      "department": "condiments"
+    },
+    {
+      "query": "vinagre balsamico",
+      "department": "condiments"
+    },
+    {
+      "query": "vinagre de alcohol",
+      "department": "condiments"
+    },
+    {
+      "query": "crema",
+      "department": "dairy"
+    },
+    {
+      "query": "crema de leche",
+      "department": "dairy"
+    },
+    {
+      "query": "dulce de leche",
+      "department": "dairy"
+    },
+    {
+      "query": "leche",
+      "department": "dairy"
+    },
+    {
+      "query": "leche chocolatada",
+      "department": "dairy"
+    },
+    {
+      "query": "leche descremada",
+      "department": "dairy"
+    },
+    {
+      "query": "leche en polvo",
+      "department": "dairy"
+    },
+    {
+      "query": "leche entera",
+      "department": "dairy"
+    },
+    {
+      "query": "manteca",
+      "department": "dairy"
+    },
+    {
+      "query": "muzzarella",
+      "department": "dairy"
+    },
+    {
+      "query": "queso",
+      "department": "dairy"
+    },
+    {
+      "query": "queso cremoso",
+      "department": "dairy"
+    },
+    {
+      "query": "queso rallado",
+      "department": "dairy"
+    },
+    {
+      "query": "ricota",
+      "department": "dairy"
+    },
+    {
+      "query": "yogur",
+      "department": "dairy"
+    },
+    {
+      "query": "yogur griego",
+      "department": "dairy"
+    },
+    {
+      "query": "aspiradora",
+      "department": "electronics"
+    },
+    {
+      "query": "auriculares",
+      "department": "electronics"
+    },
+    {
+      "query": "cafetera",
+      "department": "electronics"
+    },
+    {
+      "query": "celular",
+      "department": "electronics"
+    },
+    {
+      "query": "heladera",
+      "department": "electronics"
+    },
+    {
+      "query": "lavarropas",
+      "department": "electronics"
+    },
+    {
+      "query": "licuadora",
+      "department": "electronics"
+    },
+    {
+      "query": "microondas",
+      "department": "electronics"
+    },
+    {
+      "query": "parlante",
+      "department": "electronics"
+    },
+    {
+      "query": "tablet",
+      "department": "electronics"
+    },
+    {
+      "query": "televisor",
+      "department": "electronics"
+    },
+    {
+      "query": "tostadora",
+      "department": "electronics"
+    },
+    {
+      "query": "acelga",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "ajo",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "albahaca",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "apio",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "arandanos",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "banana",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "batata",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "berenjena",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "brocoli",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "cebolla",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "cerezas",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "chaucha",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "choclo",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "cilantro",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "ciruela",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "coliflor",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "damasco",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "durazno",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "espinaca",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "frutilla",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "kiwi",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "lechuga",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "limon",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "mandarina",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "manzana",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "melon",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "morron",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "naranja",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "palta",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "papa",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "papas",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "pera",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "perejil",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "pomelo",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "puerro",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "remolacha",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "repollo",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "sandia",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "tomate",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "tomate cherry",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "uva",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "uvas",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "zanahoria",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "zapallo",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "zucchini",
+      "department": "fresh_produce"
+    },
+    {
+      "query": "alcohol en gel",
+      "department": "health_supplements"
+    },
+    {
+      "query": "aspirina",
+      "department": "health_supplements"
+    },
+    {
+      "query": "curitas",
+      "department": "health_supplements"
+    },
+    {
+      "query": "ibuprofeno",
+      "department": "health_supplements"
+    },
+    {
+      "query": "paracetamol",
+      "department": "health_supplements"
+    },
+    {
+      "query": "termometro",
+      "department": "health_supplements"
+    },
+    {
+      "query": "vitamina c",
+      "department": "health_supplements"
+    },
+    {
+      "query": "acolchado",
+      "department": "home_goods"
+    },
+    {
+      "query": "almohada",
+      "department": "home_goods"
+    },
+    {
+      "query": "bandeja",
+      "department": "home_goods"
+    },
+    {
+      "query": "botella",
+      "department": "home_goods"
+    },
+    {
+      "query": "cacerola",
+      "department": "home_goods"
+    },
+    {
+      "query": "cesto",
+      "department": "home_goods"
+    },
+    {
+      "query": "cortina",
+      "department": "home_goods"
+    },
+    {
+      "query": "cubiertos",
+      "department": "home_goods"
+    },
+    {
+      "query": "cuchillo",
+      "department": "home_goods"
+    },
+    {
+      "query": "espejo",
+      "department": "home_goods"
+    },
+    {
+      "query": "florero",
+      "department": "home_goods"
+    },
+    {
+      "query": "mantel",
+      "department": "home_goods"
+    },
+    {
+      "query": "olla",
+      "department": "home_goods"
+    },
+    {
+      "query": "organizador",
+      "department": "home_goods"
+    },
+    {
+      "query": "plato",
+      "department": "home_goods"
+    },
+    {
+      "query": "sabana",
+      "department": "home_goods"
+    },
+    {
+      "query": "sarten",
+      "department": "home_goods"
+    },
+    {
+      "query": "tabla de cortar",
+      "department": "home_goods"
+    },
+    {
+      "query": "taza",
+      "department": "home_goods"
+    },
+    {
+      "query": "toalla",
+      "department": "home_goods"
+    },
+    {
+      "query": "vaso",
+      "department": "home_goods"
+    },
+    {
+      "query": "balde",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "bolsas",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "bolsas de residuos",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "desinfectante",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "detergente",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "escoba",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "esponja",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "jabon",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "jabon blanco",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "jabon liquido",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "lavandina",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "lavavajillas",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "limpiador",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "mopa",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "papel higienico",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "rollo de cocina",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "servilletas",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "trapo",
+      "department": "household_cleaning"
+    },
+    {
+      "query": "asado",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "atun",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "bife de chorizo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "bondiola",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "calamares",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "carne",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "cerdo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "chorizo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "costillas",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "jamon",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "langostinos",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "lomo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "merluza",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "milanesa",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "mortadela",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "osobuco",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "panceta",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "pata muslo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "pechuga",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "pescado",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "pollo",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "roast beef",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "salame",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "salchicha",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "salmon",
+      "department": "meat_seafood"
+    },
+    {
+      "query": "acondicionador",
+      "department": "personal_care"
+    },
+    {
+      "query": "cepillo de dientes",
+      "department": "personal_care"
+    },
+    {
+      "query": "dentifrico",
+      "department": "personal_care"
+    },
+    {
+      "query": "desodorante",
+      "department": "personal_care"
+    },
+    {
+      "query": "enjuague bucal",
+      "department": "personal_care"
+    },
+    {
+      "query": "esmalte",
+      "department": "personal_care"
+    },
+    {
+      "query": "hojas de afeitar",
+      "department": "personal_care"
+    },
+    {
+      "query": "jabon de tocador",
+      "department": "personal_care"
+    },
+    {
+      "query": "labial",
+      "department": "personal_care"
+    },
+    {
+      "query": "maquillaje",
+      "department": "personal_care"
+    },
+    {
+      "query": "maquina de afeitar",
+      "department": "personal_care"
+    },
+    {
+      "query": "pasta dental",
+      "department": "personal_care"
+    },
+    {
+      "query": "shampoo",
+      "department": "personal_care"
+    },
+    {
+      "query": "tampones",
+      "department": "personal_care"
+    },
+    {
+      "query": "tintura",
+      "department": "personal_care"
+    },
+    {
+      "query": "toallitas femeninas",
+      "department": "personal_care"
+    },
+    {
+      "query": "empanadas",
+      "department": "prepared_food"
+    },
+    {
+      "query": "pizza",
+      "department": "prepared_food"
+    },
+    {
+      "query": "alfajor",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "almendras",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "bombones",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "budin",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "caramelos",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "chicles",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "chocolate",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "chocolate amargo",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "chocolinas",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "crackers",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "galletitas",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "galletitas de agua",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "mani",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "nueces",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "obleas",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "palitos",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "papas fritas",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "pochoclo",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "torta",
+      "department": "snacks_sweets"
+    },
+    {
+      "query": "arroz",
+      "department": "staples"
+    },
+    {
+      "query": "arroz parboil",
+      "department": "staples"
+    },
+    {
+      "query": "arroz yamani",
+      "department": "staples"
+    },
+    {
+      "query": "arvejas",
+      "department": "staples"
+    },
+    {
+      "query": "azucar impalpable",
+      "department": "staples"
+    },
+    {
+      "query": "edulcorante",
+      "department": "staples"
+    },
+    {
+      "query": "facturas",
+      "department": "staples"
+    },
+    {
+      "query": "fideos",
+      "department": "staples"
+    },
+    {
+      "query": "garbanzos",
+      "department": "staples"
+    },
+    {
+      "query": "harina",
+      "department": "staples"
+    },
+    {
+      "query": "harina 000",
+      "department": "staples"
+    },
+    {
+      "query": "harina leudante",
+      "department": "staples"
+    },
+    {
+      "query": "lentejas",
+      "department": "staples"
+    },
+    {
+      "query": "maicena",
+      "department": "staples"
+    },
+    {
+      "query": "medialunas",
+      "department": "staples"
+    },
+    {
+      "query": "mostacholes",
+      "department": "staples"
+    },
+    {
+      "query": "noquis",
+      "department": "staples"
+    },
+    {
+      "query": "pan",
+      "department": "staples"
+    },
+    {
+      "query": "pan frances",
+      "department": "staples"
+    },
+    {
+      "query": "pan lactal",
+      "department": "staples"
+    },
+    {
+      "query": "polenta",
+      "department": "staples"
+    },
+    {
+      "query": "porotos",
+      "department": "staples"
+    },
+    {
+      "query": "ravioles",
+      "department": "staples"
+    },
+    {
+      "query": "spaghetti",
+      "department": "staples"
+    },
+    {
+      "query": "tallarin",
+      "department": "staples"
+    },
+    {
+      "query": "carpeta",
+      "department": "stationery"
+    },
+    {
+      "query": "cartulina",
+      "department": "stationery"
+    },
+    {
+      "query": "cuaderno",
+      "department": "stationery"
+    },
+    {
+      "query": "lapicera",
+      "department": "stationery"
+    },
+    {
+      "query": "lapiz",
+      "department": "stationery"
+    },
+    {
+      "query": "marcador",
+      "department": "stationery"
+    },
+    {
+      "query": "regla",
+      "department": "stationery"
+    },
+    {
+      "query": "resaltador",
+      "department": "stationery"
+    },
+    {
+      "query": "tijera",
+      "department": "stationery"
+    },
+    {
+      "query": "clavos",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "destornillador",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "martillo",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "pinza",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "sierra",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "taladro",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "tornillos",
+      "department": "tools_hardware"
+    },
+    {
+      "query": "autito",
+      "department": "toys_games"
+    },
+    {
+      "query": "bicicleta",
+      "department": "toys_games"
+    },
+    {
+      "query": "bloques",
+      "department": "toys_games"
+    },
+    {
+      "query": "cartas",
+      "department": "toys_games"
+    },
+    {
+      "query": "disfraz",
+      "department": "toys_games"
+    },
+    {
+      "query": "globo",
+      "department": "toys_games"
+    },
+    {
+      "query": "muneca",
+      "department": "toys_games"
+    },
+    {
+      "query": "pelota",
+      "department": "toys_games"
+    },
+    {
+      "query": "peluche",
+      "department": "toys_games"
+    },
+    {
+      "query": "rompecabezas",
+      "department": "toys_games"
+    }
+  ]
+}

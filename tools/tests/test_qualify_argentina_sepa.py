@@ -149,12 +149,23 @@ class ArgentinaSepaQualificationTest(unittest.TestCase):
     def test_unit_aliases_are_explicit_and_unknown_stays_unknown(self):
         self.assertEqual(("GRAM", 500), parse_quantity("500", "GRM"))
         self.assertEqual(("GRAM", 1000), parse_quantity("1", "KG"))
+        self.assertEqual(("GRAM", 1000), parse_quantity("1", "KGM"))
         self.assertEqual(("MILLILITRE", 473), parse_quantity("473", "ml"))
+        self.assertEqual(("MILLILITRE", 250), parse_quantity("250", "CMQ"))
         self.assertEqual(("MILLILITRE", 1000), parse_quantity("1", "ltr"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UNI"))
         self.assertEqual(("COUNT", 1), parse_quantity("1", "UD"))
         self.assertIsNone(parse_quantity("1", "PACK"))
         self.assertIsNone(parse_quantity("", "GRM"))
+
+    def test_reference_price_is_the_scaled_list_price(self):
+        from decimal import Decimal
+
+        package = parse_quantity("250", "CMQ")
+        basis = parse_quantity("1", "LTR")
+        self.assertEqual(package, ("MILLILITRE", 250))
+        self.assertEqual(basis, ("MILLILITRE", 1000))
+        self.assertEqual(Decimal("9055") * basis[1] / package[1], Decimal("36220"))
 
     def test_valid_nested_release_streams_rows_and_preserves_unknowns(self):
         products = PRODUCT_HEADER + "".join(

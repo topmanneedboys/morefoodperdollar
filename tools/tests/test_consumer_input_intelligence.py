@@ -52,6 +52,7 @@ def fixture_records() -> list[dict[str, object]]:
         item("apple-juice", "Jugo de Manzana 1 L", "1", "l", form="juice"),
         item("orange", "Naranja Fresca 1 kg", "1", "kg", form="fresh"),
         item("orange-soda", "Gaseosa Naranja 2 L", "2", "l", form="soda"),
+        item("orange-vodka", "Vodka Orange 700 ml", "700", "ml"),
         item("chicken", "Pollo Fresco 1 kg", "1", "kg", form="fresh"),
         item("chicken-broth", "Caldo Sabor Pollo 1 L", "1", "l", form="broth"),
         item("milk-cosmetic", "Crema Corporal 250 ml", "250", "ml", form="cosmetic"),
@@ -131,6 +132,7 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
         trap_queries = (
             "apple juice 1l",
             "orange soda 2l",
+            "orange vodka 700ml",
             "chicken flavour 1kg",
             "chicken broth 1l",
             "milk cosmetics 250ml",
@@ -149,6 +151,18 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
                     # A result may be shown only as a clarification suggestion;
                     # it must never be silently turned into a structured line.
                     self.assertIsNone(result.get("structuredLine"))
+
+    def test_excluded_forms_apply_to_search_ranking(self):
+        from tools.consumer_input_intelligence import (
+            intent_excluded_terms,
+            name_matches_excluded_form,
+            parse_intent,
+        )
+
+        intent = parse_intent("orange")
+        self.assertIn("vodka", intent_excluded_terms(intent))
+        self.assertTrue(name_matches_excluded_form("Vodka Orange 700 ml", None, intent))
+        self.assertFalse(name_matches_excluded_form("Naranja Fresca 1 kg", None, intent))
 
     def test_variants_negation_and_wrong_dimension(self):
         zero = self.line("coca zero 2.25l")
