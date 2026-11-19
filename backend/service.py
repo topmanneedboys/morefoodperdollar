@@ -274,6 +274,56 @@ def _matches_taxonomy_facet(
     return True
 
 
+def _parse_price_filter(value: Any, name: str) -> Decimal | None:
+    if value is None:
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        raise BackendQueryError(f"{name} filter is invalid") from None
+    if parsed < 0 or parsed > Decimal("100000000"):
+        raise BackendQueryError(f"{name} filter is invalid")
+    return parsed
+
+
+def _candidate_has_store(candidate: Mapping[str, Any], store: str) -> bool:
+    offers = candidate.get("qualifiedOffers")
+    if not isinstance(offers, Sequence) or isinstance(offers, (str, bytes)):
+        return False
+    return any(
+        isinstance(offer, Mapping)
+        and isinstance(offer.get("storeName"), str)
+        and offer["storeName"].strip().casefold() == store
+        for offer in offers
+    )
+
+
+def _candidate_price_within(
+    candidate: Mapping[str, Any],
+    minimum: Decimal | None,
+    maximum: Decimal | None,
+) -> bool:
+    offers = candidate.get("qualifiedOffers")
+    if not isinstance(offers, Sequence) or isinstance(offers, (str, bytes)):
+        return False
+    for offer in offers:
+        if not isinstance(offer, Mapping):
+            continue
+        price = offer.get("listPrice")
+        if not isinstance(price, Mapping):
+            continue
+        try:
+            amount = Decimal(str(price.get("amount")))
+        except (InvalidOperation, ValueError):
+            continue
+        if minimum is not None and amount < minimum:
+            continue
+        if maximum is not None and amount > maximum:
+            continue
+        return True
+    return False
+
+
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
     """Authorize only the explicitly deployed identity-search environment."""
     if os.environ.get(ANDROID_NETWORKING_AUTHORIZED_ENV, "").strip().lower() != "true":
@@ -733,6 +783,21 @@ class BackendService:
                 or value != value.lower()
             ):
                 raise BackendQueryError(f"{name} filter is invalid")
+        brand = payload.get("brand")
+        store = payload.get("store")
+        for name, value in (("brand", brand), ("store", store)):
+            if value is None:
+                continue
+            if (
+                not isinstance(value, str)
+                or not 1 <= len(value.strip()) <= 80
+                or not value.strip().isprintable()
+            ):
+                raise BackendQueryError(f"{name} filter is invalid")
+        min_price = _parse_price_filter(payload.get("minPrice"), "minPrice")
+        max_price = _parse_price_filter(payload.get("maxPrice"), "maxPrice")
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise BackendQueryError("price filter range is invalid")
         selection_id = payload.get("selectionId")
         if selection_id is not None:
             if (
@@ -829,6 +894,27 @@ class BackendService:
                     for item in candidates
                     if _matches_taxonomy_facet(item, department, subcategory)
                 )
+        if brand is not None:
+            target_brand = brand.strip().casefold()
+            candidates = tuple(
+                item
+                for item in candidates
+                if isinstance(item.get("brand"), str)
+                and item["brand"].strip().casefold() == target_brand
+            )
+        if store is not None:
+            target_store = store.strip().casefold()
+            candidates = tuple(
+                item
+                for item in candidates
+                if _candidate_has_store(item, target_store)
+            )
+        if min_price is not None or max_price is not None:
+            candidates = tuple(
+                item
+                for item in candidates
+                if _candidate_price_within(item, min_price, max_price)
+            )
         # Keep the complete bounded evidence window for clarification.  The
         # visible result set may be refined below (for example a plain egg
         # query removes toy eggs), but the shopper still needs the observed
@@ -877,7 +963,14 @@ class BackendService:
             "regionsQueried": metrics.regions_queried,
             "query": query,
             "originalQuery": query,
-            "filters": {"department": department, "subcategory": subcategory},
+            "filters": {
+                "department": department,
+                "subcategory": subcategory,
+                "brand": brand,
+                "store": store,
+                "minPrice": str(min_price) if min_price is not None else None,
+                "maxPrice": str(max_price) if max_price is not None else None,
+            },
             # This is a normalized display echo, not a resolved product name.
             "interpretedQuery": query.strip(),
             "resolution": "DISCOVERY",
