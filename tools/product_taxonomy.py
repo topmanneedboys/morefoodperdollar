@@ -2071,6 +2071,31 @@ def build_taxonomy_index(
     # streams are byte-for-byte consistent.
     records = list(provider_records())
     count, output_sha256, output_bytes = _write_jsonl(output, records)
+
+    # Optional reviewer hint: a brand seen at least five times with >=95% of
+    # its classified products in one department suggests that department for
+    # the remaining review rows.  This is a hint only; it never changes the
+    # coverage status or classifies a product without human review.
+    brand_counts: dict[str, Counter[str]] = {}
+    for value in records:
+        taxonomy = value["taxonomy"]
+        if taxonomy["coverageStatus"] != "CLASSIFIED":
+            continue
+        brand = (value.get("brand") or "").strip().upper()
+        department = taxonomy.get("primaryDepartment")
+        if brand and isinstance(department, str):
+            brand_counts.setdefault(brand, Counter())[department] += 1
+    brand_departments: dict[str, str] = {}
+    for brand, counts in brand_counts.items():
+        total = sum(counts.values())
+        department, hits = counts.most_common(1)[0]
+        if total >= 5 and hits / total >= 0.95:
+            brand_departments[brand] = department
+
+    def _brand_suggestion(value: Mapping[str, Any]) -> str | None:
+        brand = (value.get("brand") or "").strip().upper()
+        return brand_departments.get(brand) if brand else None
+
     review_records = [
         {
             "providerProductId": value["providerProductId"],
@@ -2085,6 +2110,8 @@ def build_taxonomy_index(
             "subcategoryCandidates": value["taxonomy"].get("subcategoryCandidates", []),
             "familyCandidates": value["taxonomy"]["familyCandidates"],
             "formCandidates": value["taxonomy"]["formCandidates"],
+            "suggestedDepartment": _brand_suggestion(value),
+            "suggestionSource": "BRAND_ASSOCIATION" if _brand_suggestion(value) else None,
         }
         for value in records
         if value["taxonomy"]["coverageStatus"] == "REVIEW_REQUIRED"
@@ -2136,6 +2163,7 @@ def build_taxonomy_index(
             "reviewQueueRecords": len(review_records),
             "productsWithMultipleDepartmentCandidates": multiple_departments,
             "productsWithPrimarySubcategory": products_with_subcategory,
+            "reviewSuggestions": sum(1 for value in review_records if value["suggestedDepartment"]),
             "departmentCandidateCounts": dict(sorted(department_counts.items())),
             "subcategoryCandidateCounts": dict(sorted(subcategory_counts.items())),
             "formCounts": dict(sorted(form_counts.items())),
