@@ -216,6 +216,23 @@ def _tokens(value: str) -> tuple[str, ...]:
     return values
 
 
+def _singular_candidates(tokens: Sequence[str]) -> tuple[tuple[str, ...], ...]:
+    """Spanish singular fallbacks, most likely first (drop -s before -es)."""
+
+    variants: list[tuple[str, ...]] = []
+    for suffix in ("s", "es"):
+        values: list[str] = []
+        for token in tokens:
+            if len(token) >= 4 and token.endswith(suffix):
+                values.append(token[: -len(suffix)])
+            else:
+                values.append(token)
+        variant = tuple(values)
+        if variant != tuple(tokens) and variant not in variants:
+            variants.append(variant)
+    return tuple(variants)
+
+
 def _trigrams(value: str) -> tuple[str, ...]:
     compact = f"  {_joined_key(value)}  "
     if len(compact) <= 3:
@@ -1102,12 +1119,29 @@ def parse_intent(
     typo_used = False
     matched_alias: str | None = None
     if isinstance(aliases, Mapping):
-        for phrase in sorted((str(key) for key in aliases), key=lambda value: (-len(_tokens(value)), -len(value), value)):
+        ordered_phrases = sorted(
+            (str(key) for key in aliases),
+            key=lambda value: (-len(_tokens(value)), -len(value), value),
+        )
+        for phrase in ordered_phrases:
             if _contains_phrase(tokens, phrase):
                 concept = str(aliases[phrase])
                 matched_alias = phrase
                 alias_used = normalize_text(phrase) != normalize_text(concept)
                 break
+        if concept is None:
+            # Spanish plurals ("tomates", "manzanas") resolve through their
+            # singular alias.  The transformed tokens are a fallback only and
+            # never override an exact alias match.
+            for singular in _singular_candidates(tokens):
+                for phrase in ordered_phrases:
+                    if _contains_phrase(singular, phrase):
+                        concept = str(aliases[phrase])
+                        matched_alias = phrase
+                        alias_used = True
+                        break
+                if concept is not None:
+                    break
     # A small audited typo table is deliberately separate from semantic
     # aliases so the result can be labelled RESOLVED_SAFE_CORRECTION rather
     # than hiding a spelling correction as a language translation.

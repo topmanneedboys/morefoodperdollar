@@ -22,6 +22,7 @@ from tools.consumer_input_intelligence import (
     CatalogRecord,
     ConsumerInputInterpreter,
     normalize_text,
+    parse_intent,
     parse_quantity,
     sqlite_fts5_trigram_supported,
 )
@@ -151,6 +152,24 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
                     # A result may be shown only as a clarification suggestion;
                     # it must never be silently turned into a structured line.
                     self.assertIsNone(result.get("structuredLine"))
+
+    def test_plural_queries_resolve_through_their_singular_alias(self):
+        cases = {
+            "tomates": "tomato",
+            "manzanas": "apple",
+            "naranjas": "orange",
+            "bananas": "banana",
+            "papas": "potato",
+            "panes": "bread",
+        }
+        for query, concept in cases.items():
+            with self.subTest(query=query):
+                self.assertEqual(parse_intent(query).concept, concept)
+
+    def test_accented_and_plain_queries_resolve_identically(self):
+        for query in ("café", "cafe", "CAFÉ"):
+            with self.subTest(query=query):
+                self.assertEqual(parse_intent(query).concept, "coffee")
 
     def test_excluded_forms_apply_to_search_ranking(self):
         from tools.consumer_input_intelligence import (
