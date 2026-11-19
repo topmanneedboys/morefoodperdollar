@@ -504,6 +504,28 @@ class SearchEvidenceTests(unittest.TestCase):
         with self.assertRaises(BackendQueryError):
             service.search({"query": "leche", "minPrice": "-1"})
 
+    def test_public_match_exposes_category_but_not_the_sidecar(self) -> None:
+        from backend.service import _public_match
+
+        candidate = {
+            "productEvidenceKey": "k",
+            "name": "LECHE ENTERA 1 L",
+            "_taxonomy": {
+                "primaryDepartment": "dairy",
+                "departmentCandidates": [{"key": "dairy", "labelEs": "Lácteos", "labelEn": "Dairy"}],
+                "primarySubcategory": "milk",
+                "subcategoryCandidates": [{"key": "milk", "labelEs": "Leches", "labelEn": "Milk"}],
+            },
+        }
+
+        projected = _public_match(candidate)
+
+        self.assertEqual(projected["category"]["department"], "dairy")
+        self.assertEqual(projected["category"]["subcategory"], "milk")
+        self.assertEqual(projected["category"]["departmentLabelEs"], "Lácteos")
+        self.assertEqual(projected["category"]["subcategoryLabelEn"], "Milk")
+        self.assertNotIn("_taxonomy", projected)
+
     def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
         from backend.service import _search_facets
 

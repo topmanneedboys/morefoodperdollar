@@ -379,6 +379,43 @@ def _strip_internal(value: Any) -> Any:
     return result
 
 
+def _public_category(candidate: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Project the annotated category into a public, bounded match field."""
+
+    taxonomy = candidate.get("_taxonomy")
+    if not isinstance(taxonomy, Mapping):
+        return None
+    department = taxonomy.get("primaryDepartment")
+    subcategory = taxonomy.get("primarySubcategory")
+    if not isinstance(department, str) and not isinstance(subcategory, str):
+        return None
+    category: dict[str, Any] = {
+        "department": department if isinstance(department, str) else None,
+        "subcategory": subcategory if isinstance(subcategory, str) else None,
+    }
+    for item in taxonomy.get("departmentCandidates") or ():
+        if isinstance(item, Mapping) and item.get("key") == department:
+            category["departmentLabelEs"] = str(item.get("labelEs") or department)
+            category["departmentLabelEn"] = str(item.get("labelEn") or department)
+            break
+    for item in taxonomy.get("subcategoryCandidates") or ():
+        if isinstance(item, Mapping) and item.get("key") == subcategory:
+            category["subcategoryLabelEs"] = str(item.get("labelEs") or subcategory)
+            category["subcategoryLabelEn"] = str(item.get("labelEn") or subcategory)
+            break
+    return category
+
+
+def _public_match(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    stripped = _strip_internal(candidate)
+    if not isinstance(stripped, dict):
+        return {}
+    category = _public_category(candidate)
+    if category is not None:
+        stripped["category"] = category
+    return stripped
+
+
 class ResponseLimitError(BackendQueryError):
     code = "RESPONSE_TOO_LARGE"
 
@@ -981,7 +1018,7 @@ class BackendService:
             "input": None,
             "clarification": clarification,
             "facets": _search_facets(candidates[:MAX_DISCOVERY_PRODUCT_LIMIT]),
-            "matches": [_strip_internal(value) for value in visible_candidates],
+            "matches": [_public_match(value) for value in visible_candidates],
             "pagination": {
                 "page": page,
                 "pageSize": DISCOVERY_PAGE_SIZE,
