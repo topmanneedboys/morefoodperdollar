@@ -466,6 +466,44 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertIn("filter is invalid", str(caught.exception))
 
+    def test_brand_store_and_price_filters_narrow_the_same_candidates(self) -> None:
+        from backend.service import (
+            _candidate_has_store,
+            _candidate_price_within,
+            _parse_price_filter,
+        )
+        from decimal import Decimal
+
+        candidate = {
+            "brand": "La Serenísima",
+            "qualifiedOffers": [
+                {"storeName": "Store One", "listPrice": {"amount": "1500", "currency": "ARS"}}
+            ],
+        }
+
+        self.assertTrue(_candidate_has_store(candidate, "store one"))
+        self.assertFalse(_candidate_has_store(candidate, "store two"))
+        self.assertTrue(_candidate_price_within(candidate, Decimal("1000"), Decimal("2000")))
+        self.assertFalse(_candidate_price_within(candidate, Decimal("2000"), None))
+        self.assertFalse(_candidate_price_within(candidate, None, Decimal("1000")))
+        self.assertFalse(_candidate_price_within({"qualifiedOffers": []}, None, None))
+        self.assertEqual(_parse_price_filter("1500", "minPrice"), Decimal("1500"))
+        self.assertIsNone(_parse_price_filter(None, "minPrice"))
+
+    def test_search_rejects_invalid_brand_and_price_filters(self) -> None:
+        from backend.service import BackendQueryError
+
+        service = BackendService("", release_manager=self._ReleaseManager())
+
+        with self.assertRaises(BackendQueryError):
+            service.search({"query": "leche", "brand": ""})
+        with self.assertRaises(BackendQueryError):
+            service.search({"query": "leche", "brand": "x" * 81})
+        with self.assertRaises(BackendQueryError):
+            service.search({"query": "leche", "minPrice": "2000", "maxPrice": "1000"})
+        with self.assertRaises(BackendQueryError):
+            service.search({"query": "leche", "minPrice": "-1"})
+
     def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
         from backend.service import _search_facets
 
