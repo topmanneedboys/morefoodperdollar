@@ -440,6 +440,32 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertEqual([item["productEvidenceKey"] for item in ranked], ["fruit", "juice"])
 
+    def test_category_facet_filter_matches_department_and_subcategory(self) -> None:
+        from backend.service import _matches_taxonomy_facet
+
+        candidate = {
+            "_taxonomy": {
+                "departmentCandidates": [{"key": "dairy"}],
+                "subcategoryCandidates": [{"key": "milk"}],
+            }
+        }
+
+        self.assertTrue(_matches_taxonomy_facet(candidate, "dairy", None))
+        self.assertTrue(_matches_taxonomy_facet(candidate, None, "milk"))
+        self.assertFalse(_matches_taxonomy_facet(candidate, "meat_seafood", None))
+        self.assertFalse(_matches_taxonomy_facet(candidate, None, "eggs"))
+        self.assertFalse(_matches_taxonomy_facet({}, "dairy", None))
+
+    def test_search_rejects_an_invalid_category_filter(self) -> None:
+        from backend.service import BackendQueryError
+
+        service = BackendService("", release_manager=self._ReleaseManager())
+
+        with self.assertRaises(BackendQueryError) as caught:
+            service.search({"query": "leche", "department": "Dairy!"})
+
+        self.assertIn("filter is invalid", str(caught.exception))
+
     def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
         from backend.service import _search_facets
 

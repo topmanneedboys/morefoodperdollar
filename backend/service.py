@@ -245,6 +245,35 @@ def _rank_by_expected_department(
     return tuple(value for _, value in sorted(enumerate(candidates), key=rank))
 
 
+def _matches_taxonomy_facet(
+    candidate: Mapping[str, Any],
+    department: str | None,
+    subcategory: str | None,
+) -> bool:
+    """True when the candidate carries the requested category evidence."""
+
+    taxonomy = candidate.get("_taxonomy")
+    if not isinstance(taxonomy, Mapping):
+        return False
+    if department is not None:
+        keys = {
+            value.get("key")
+            for value in taxonomy.get("departmentCandidates") or ()
+            if isinstance(value, Mapping)
+        }
+        if department not in keys:
+            return False
+    if subcategory is not None:
+        keys = {
+            value.get("key")
+            for value in taxonomy.get("subcategoryCandidates") or ()
+            if isinstance(value, Mapping)
+        }
+        if subcategory not in keys:
+            return False
+    return True
+
+
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
     """Authorize only the explicitly deployed identity-search environment."""
     if os.environ.get(ANDROID_NETWORKING_AUTHORIZED_ENV, "").strip().lower() != "true":
@@ -691,6 +720,19 @@ class BackendService:
         query = payload.get("query")
         if not isinstance(query, str) or not query.strip() or len(query.strip()) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
+        department = payload.get("department")
+        subcategory = payload.get("subcategory")
+        for name, value in (("department", department), ("subcategory", subcategory)):
+            if value is None:
+                continue
+            if (
+                not isinstance(value, str)
+                or not 1 <= len(value) <= 64
+                or not value.isascii()
+                or not value.replace("_", "").isalnum()
+                or value != value.lower()
+            ):
+                raise BackendQueryError(f"{name} filter is invalid")
         selection_id = payload.get("selectionId")
         if selection_id is not None:
             if (
@@ -770,6 +812,8 @@ class BackendService:
                 for candidate in candidates
             )
         taxonomy = self._taxonomy(handle)
+        if (department is not None or subcategory is not None) and taxonomy is None:
+            raise BackendQueryError("CATEGORY_FILTER_UNAVAILABLE")
         if taxonomy is not None:
             # Keep the index inside the identity boundary.  The internal
             # annotation is consumed only by the family/form refinements and
@@ -779,6 +823,12 @@ class BackendService:
             # query such as "naranja" cannot headline a juice or soda merely
             # because the word appears in its name.
             candidates = _rank_by_expected_department(candidates, discovery_query)
+            if department is not None or subcategory is not None:
+                candidates = tuple(
+                    item
+                    for item in candidates
+                    if _matches_taxonomy_facet(item, department, subcategory)
+                )
         # Keep the complete bounded evidence window for clarification.  The
         # visible result set may be refined below (for example a plain egg
         # query removes toy eggs), but the shopper still needs the observed
@@ -827,6 +877,7 @@ class BackendService:
             "regionsQueried": metrics.regions_queried,
             "query": query,
             "originalQuery": query,
+            "filters": {"department": department, "subcategory": subcategory},
             # This is a normalized display echo, not a resolved product name.
             "interpretedQuery": query.strip(),
             "resolution": "DISCOVERY",
