@@ -410,6 +410,36 @@ class SearchEvidenceTests(unittest.TestCase):
             self.assertEqual(result["subcategories"][0]["key"], "milk")
             self.assertEqual(result["productsWithSubcategory"], 1)
 
+    def test_category_match_ranks_before_literal_name_match(self) -> None:
+        from backend.service import _rank_by_expected_department
+
+        candidates = (
+            {
+                "productEvidenceKey": "juice",
+                "name": "JUGO NARANJA",
+                "_taxonomy": {
+                    "primaryDepartment": "beverages",
+                    "departmentCandidates": [{"key": "beverages"}],
+                    "primarySubcategory": "juice",
+                    "subcategoryCandidates": [{"key": "juice"}],
+                },
+            },
+            {
+                "productEvidenceKey": "fruit",
+                "name": "NARANJA",
+                "_taxonomy": {
+                    "primaryDepartment": "fresh_produce",
+                    "departmentCandidates": [{"key": "fresh_produce"}],
+                    "primarySubcategory": "citrus",
+                    "subcategoryCandidates": [{"key": "citrus"}],
+                },
+            },
+        )
+
+        ranked = _rank_by_expected_department(candidates, "naranja")
+
+        self.assertEqual([item["productEvidenceKey"] for item in ranked], ["fruit", "juice"])
+
     def test_search_facets_summarize_departments_brands_stores_and_prices(self) -> None:
         from backend.service import _search_facets
 

@@ -31,6 +31,7 @@ from tools.product_identity_lexicon import (
 from tools.product_taxonomy import (
     ProductTaxonomyIndex,
     build_taxonomy_clarification,
+    classify_name,
     filter_taxonomy_candidates,
     taxonomy_selection_form,
 )
@@ -201,6 +202,47 @@ def _search_facets(candidates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "sizes": _entries(sizes),
         "priceRange": price_range,
     }
+
+
+def _rank_by_expected_department(
+    candidates: Sequence[Mapping[str, Any]],
+    query: str,
+) -> tuple[Mapping[str, Any], ...]:
+    """Put products whose category matches the query intent first.
+
+    A stable, bounded re-rank of the discovered identity window: it never
+    changes the window size, prices, offers or availability, only the order of
+    the same identities, so a category match beats a literal name match.
+    """
+
+    expected = classify_name(query)
+    department = expected.get("primaryDepartment")
+    subcategory = expected.get("primarySubcategory")
+    if not isinstance(department, str) and not isinstance(subcategory, str):
+        return tuple(candidates)
+
+    def rank(item: tuple[int, Mapping[str, Any]]) -> tuple[int, int]:
+        index, candidate = item
+        taxonomy = candidate.get("_taxonomy")
+        if not isinstance(taxonomy, Mapping):
+            return (2, index)
+        departments = {
+            value.get("key")
+            for value in taxonomy.get("departmentCandidates") or ()
+            if isinstance(value, Mapping)
+        }
+        subcategories = {
+            value.get("key")
+            for value in taxonomy.get("subcategoryCandidates") or ()
+            if isinstance(value, Mapping)
+        }
+        if isinstance(subcategory, str) and subcategory in subcategories:
+            return (0, index)
+        if isinstance(department, str) and department in departments:
+            return (1, index)
+        return (2, index)
+
+    return tuple(value for _, value in sorted(enumerate(candidates), key=rank))
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -733,6 +775,10 @@ class BackendService:
             # annotation is consumed only by the family/form refinements and
             # removed by _strip_internal before the response leaves Search.
             candidates = taxonomy.annotate(candidates)
+            # Category/type match ranks before a bare literal name match, so a
+            # query such as "naranja" cannot headline a juice or soda merely
+            # because the word appears in its name.
+            candidates = _rank_by_expected_department(candidates, discovery_query)
         # Keep the complete bounded evidence window for clarification.  The
         # visible result set may be refined below (for example a plain egg
         # query removes toy eggs), but the shopper still needs the observed
