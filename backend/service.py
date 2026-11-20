@@ -274,6 +274,15 @@ def _matches_taxonomy_facet(
     return True
 
 
+def _is_classified(candidate: Mapping[str, Any]) -> bool:
+    taxonomy = candidate.get("_taxonomy")
+    if not isinstance(taxonomy, Mapping):
+        return False
+    # Only an explicit review state hides a product; older sidecars without a
+    # coverage status remain visible (fail open).
+    return taxonomy.get("coverageStatus") != "REVIEW_REQUIRED"
+
+
 def _parse_price_filter(value: Any, name: str) -> Decimal | None:
     if value is None:
         return None
@@ -916,6 +925,7 @@ class BackendService:
         taxonomy = self._taxonomy(handle)
         if (department is not None or subcategory is not None) and taxonomy is None:
             raise BackendQueryError("CATEGORY_FILTER_UNAVAILABLE")
+        hidden_unclassified = 0
         if taxonomy is not None:
             # Keep the index inside the identity boundary.  The internal
             # annotation is consumed only by the family/form refinements and
@@ -931,6 +941,12 @@ class BackendService:
                     for item in candidates
                     if _matches_taxonomy_facet(item, department, subcategory)
                 )
+            # Products whose category is still uncertain are hidden from the
+            # consumer surface until review approves them.  Fail open when no
+            # taxonomy sidecar is deployed, otherwise search would be empty.
+            before = len(candidates)
+            candidates = tuple(item for item in candidates if _is_classified(item))
+            hidden_unclassified = before - len(candidates)
         if brand is not None:
             target_brand = brand.strip().casefold()
             candidates = tuple(
@@ -1035,6 +1051,7 @@ class BackendService:
             "diagnostics": {
                 **metrics.as_dict(),
                 "serviceMs": round((time.perf_counter() - started) * 1000, 3),
+                "hiddenUnclassified": hidden_unclassified,
                 "customerResponseBytes": 0,
             },
         }

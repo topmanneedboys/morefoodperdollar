@@ -504,6 +504,14 @@ class SearchEvidenceTests(unittest.TestCase):
         with self.assertRaises(BackendQueryError):
             service.search({"query": "leche", "minPrice": "-1"})
 
+    def test_is_classified_hides_only_explicit_review_rows(self) -> None:
+        from backend.service import _is_classified
+
+        self.assertTrue(_is_classified({"_taxonomy": {"coverageStatus": "CLASSIFIED"}}))
+        self.assertTrue(_is_classified({"_taxonomy": {}}))
+        self.assertFalse(_is_classified({"_taxonomy": {"coverageStatus": "REVIEW_REQUIRED"}}))
+        self.assertFalse(_is_classified({}))
+
     def test_public_match_exposes_category_but_not_the_sidecar(self) -> None:
         from backend.service import _public_match
 
