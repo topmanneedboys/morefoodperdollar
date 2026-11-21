@@ -826,6 +826,19 @@ class BackendService:
                 result = index.query(payload).to_dict()
         except DiscoveryError as exc:
             raise BackendQueryError(str(exc)) from exc
+        # Hide review-required identities and let category matches lead the
+        # same way v1 Search does.  This is presentation-only and bounded.
+        try:
+            taxonomy_handle = self.release_manager.pin(require_fresh=True)
+            taxonomy = self._taxonomy(taxonomy_handle)
+        except Exception:  # noqa: BLE001 - optional sidecar must fail open
+            taxonomy = None
+        if taxonomy is not None and isinstance(result.get("matches"), list):
+            raw_matches = [dict(item) for item in result["matches"] if isinstance(item, Mapping)]
+            annotated = taxonomy.annotate(raw_matches)
+            kept = [item for item in annotated if _is_classified(item)]
+            kept = list(_rank_by_expected_department(kept, str(payload.get("query") or "")))
+            result["matches"] = [_strip_internal(item) for item in kept]
         request_id = correlation_id or str(uuid.uuid4())
         response = {
             "apiContractVersion": "valuepilot-discovery-http-v2",
