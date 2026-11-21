@@ -17,9 +17,8 @@ from tools.shopping_intelligence_engine import ExactMoney, ExactQuantity, Shoppi
 
 SORTS = frozenset({"name", "pack", "unit", "distance"})
 BASES = frozenset({"100 g", "100 ml", "1 count"})
-# Bounded exact-offer join for broad queries; the leading identities carry the
-# visible page while the remainder stays identity-only.
-MAX_SCOPED_OFFER_IDENTITIES = 48
+# Bounded exact-offer join used only when the full join exceeds the safety cap.
+MAX_SCOPED_OFFER_IDENTITIES = 24
 
 
 def _amount(offer: Mapping[str, Any], sort: str) -> Fraction | None:
@@ -52,7 +51,7 @@ def _offer_order(offer: Mapping[str, Any], sort: str):
     return (amount is None, amount or Fraction(0), str(offer.get("storeKey", "")), str(offer.get("offerKey", "")))
 
 
-def scoped_search(index, reader, handle, payload: Mapping[str, Any], selections):
+def scoped_search(index, reader, handle, payload: Mapping[str, Any], selections, arrange=None):
     # The active immutable release must match the classifier's source release.
     if index.metadata["release_id"] != handle.release_id:
         raise BackendQueryError("DISCOVERY_PRICE_RELEASE_MISMATCH")
@@ -88,23 +87,22 @@ def scoped_search(index, reader, handle, payload: Mapping[str, Any], selections)
                 raise ValueError("cursor mismatch")
         except (KeyError, TypeError, ValueError) as exc:
             raise BackendQueryError("cursor does not match this scoped query") from exc
-    # Joining offers for a broad query (for example "orange" with hundreds of
-    # identities) can exceed the bounded exact-offer plan limit.  Try the exact
-    # global join first (cheapest-anywhere sorting); if the safety bound trips,
-    # retry with the leading identities so the visible page still gets prices.
-    try:
-        offers, metrics = reader.offers_for_identities(
-            tuple(keys), selections=selections, latitude=Decimal(payload["latitude"]),
-            longitude=Decimal(payload["longitude"]), radius_km=Decimal(payload["radiusKm"]),
-        )
-    except BackendQueryError as exc:
-        if "DISCOVERY_SCOPE_TOO_LARGE" not in str(exc):
-            raise
-        offers, metrics = reader.offers_for_identities(
-            tuple(keys)[:MAX_SCOPED_OFFER_IDENTITIES], selections=selections,
-            latitude=Decimal(payload["latitude"]), longitude=Decimal(payload["longitude"]),
-            radius_km=Decimal(payload["radiusKm"]),
-        )
+    offers = {}
+    metrics = None
+    windows: list[int] = []
+    for window in (len(keys), MAX_SCOPED_OFFER_IDENTITIES, 16, 8, 4, 0):
+        if window not in windows and window <= len(keys):
+            windows.append(window)
+    for window in windows:
+        try:
+            offers, metrics = reader.offers_for_identities(
+                tuple(keys)[:window], selections=selections, latitude=Decimal(payload["latitude"]),
+                longitude=Decimal(payload["longitude"]), radius_km=Decimal(payload["radiusKm"]),
+            )
+            break
+        except BackendQueryError as exc:
+            if "DISCOVERY_SCOPE_TOO_LARGE" not in str(exc) or window == 0:
+                raise
     # Store choices cover the complete eligible offer set, not the visible page.
     stores = {}
     for bucket in offers.values():
@@ -135,6 +133,8 @@ def scoped_search(index, reader, handle, payload: Mapping[str, Any], selections)
         ranked.append((order + (identity["displayName"].casefold(), identity["identityKey"]),
                        {**identity, "qualifiedOffers": bucket[:8], "qualifiedOfferCount": len(bucket)}))
     ranked.sort(key=lambda row: row[0])
+    if arrange is not None:
+        ranked = arrange(ranked)
     matches = [row[1] for row in ranked[offset:offset + request.page_size]]
     next_offset = offset + len(matches)
     has_more = next_offset < len(ranked)

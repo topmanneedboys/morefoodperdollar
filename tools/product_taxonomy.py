@@ -49,6 +49,16 @@ MAX_CLARIFICATION_CHOICES = 30
 MAX_INDEX_RECORDS = 100_000
 MAX_INDEX_BYTES = 64 * 1024 * 1024
 
+# A fruit/vegetable word alone is not enough to call a row fresh produce.
+_PRODUCE_CONTEXT_TOKENS = frozenset({
+    "kg", "kilo", "kilos", "kilogramo", "kilogramos",
+    "g", "gr", "grs", "gramo", "gramos",
+    "fresco", "fresca", "frescos", "frescas",
+    "fruta", "frutas", "verdura", "verduras",
+    "granel", "atado", "bandeja", "docena", "unidad", "unidades",
+    "campo", "huerta", "maduro", "madura",
+})
+
 
 @dataclass(frozen=True)
 class TaxonomyRule:
@@ -759,8 +769,12 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.update({
         "shampoo", "acondicionador", "crema", "gel", "aromatizante",
         "lavavajillas", "suavizante", "quitamanchas", "limpia", "piso",
         "ropa", "bano", "gaseosa", "soda", "agua saborizada", "refresco",
-        "energizante", "zumo", "nectar", "bebida",
+        "energizante", "zumo", "nectar", "bebida", "ades", "actimel",
     ),
+})
+_REVIEW_BATCH_DEPARTMENT_TERMS.update({
+    "beverages": _REVIEW_BATCH_DEPARTMENT_TERMS["beverages"] + ("ades",),
+    "dairy": _REVIEW_BATCH_DEPARTMENT_TERMS["dairy"] + ("actimel",),
 })
 
 
@@ -1669,6 +1683,14 @@ def classify_name(name: str, *, family_candidates: Iterable[Mapping[str, Any]] =
                 "evidence": "REVIEWED_FAMILY_LEXICON",
             })
     families.sort(key=lambda item: (item["family"], item["role"], item["matchedTerms"]))
+
+    # Fruit/vegetable words also appear in packaging, drinks and household
+    # names ("cuaderno naranja", "agua naranja").  Keep fresh produce only
+    # when the name carries a produce signal (weight, freshness, bulk) or when
+    # produce is the only candidate.
+    if len(departments) > 1 and any(item["key"] == "fresh_produce" for item in departments):
+        if not (set(tokens) & _PRODUCE_CONTEXT_TOKENS):
+            departments = [item for item in departments if item["key"] != "fresh_produce"]
 
     parent_keys = {item["key"] for item in departments}
     subcategories: list[dict[str, Any]] = []

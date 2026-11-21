@@ -821,7 +821,23 @@ class BackendService:
                     raise BackendQueryError("DISCOVERY_PRICE_AUTHORIZATION_REQUIRED")
                 reader = self._reader(handle)
                 selections = self._route_selections(reader, payload)
-                result = scoped_search(index, reader, handle, payload, selections)
+                taxonomy = self._taxonomy(handle)
+                order = None
+                if taxonomy is not None:
+                    query_text = str(payload.get("query") or "")
+
+                    def order(rows, _taxonomy=taxonomy, _query=query_text):
+                        by_key = {row[1]["identityKey"]: row for row in rows}
+                        annotated = _taxonomy.annotate([row[1] for row in rows])
+                        kept = [item for item in annotated if _is_classified(item)]
+                        ordered = []
+                        for item in _rank_by_expected_department(kept, _query):
+                            row = by_key.get(item["identityKey"])
+                            if row is not None:
+                                ordered.append((row[0], row[1]))
+                        return ordered
+
+                result = scoped_search(index, reader, handle, payload, selections, arrange=order)
             else:
                 result = index.query(payload).to_dict()
         except DiscoveryError as exc:
