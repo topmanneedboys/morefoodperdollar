@@ -477,7 +477,11 @@ object ArgentinaBackendContract {
         val pageSize: Int = 20,
         val cursor: String? = null,
         val facetPageSize: Int = MAX_DISCOVERY_FACET_PAGE_SIZE,
-        val facetCursor: String? = null
+        val facetCursor: String? = null,
+        /** Optional complete location; without it discovery is identity-only. */
+        val latitude: String? = null,
+        val longitude: String? = null,
+        val radiusKm: String? = null
     ) {
         init {
             require(query.trim().isNotEmpty() && query.length <= 256)
@@ -489,6 +493,13 @@ object ArgentinaBackendContract {
             require(facetPageSize in 1..MAX_DISCOVERY_FACET_PAGE_SIZE)
             require(cursor == null || cursor.length <= 2_048)
             require(facetCursor == null || facetCursor.length <= 2_048)
+            val location = listOf(latitude, longitude, radiusKm)
+            if (location.any { it != null }) {
+                require(location.all { it != null }) { "location must be complete" }
+                validateCoordinate(latitude!!, "latitude", -90, 90)
+                validateCoordinate(longitude!!, "longitude", -180, 180)
+                validateDecimal(radiusKm!!, "radiusKm", nonNegative = true)
+            }
         }
     }
 
@@ -496,7 +507,9 @@ object ArgentinaBackendContract {
         val identityKey: String,
         val providerProductId: String,
         val displayName: String,
-        val brand: String?
+        val brand: String?,
+        /** Exact current-release offers when the request carried a location. */
+        val qualifiedOffers: List<SearchOffer> = emptyList()
     )
 
     data class DiscoveryChoice(
@@ -763,11 +776,20 @@ object ArgentinaBackendContract {
         boundedArray(matchesArray, MAX_DISCOVERY_MATCHES, "discovery matches")
         val matches = (0 until matchesArray.length()).map { index ->
             val match = matchesArray.get(index) as? JSONObject ?: invalid("discovery match must be an object")
+            val identityKey = requiredId(match, "identityKey", 256)
+            val offers =
+                if (!match.has("qualifiedOffers") || match.isNull("qualifiedOffers")) emptyList()
+                else parseQualifiedOffers(
+                    requiredArray(match, "qualifiedOffers"),
+                    identityKey,
+                    expectedRelease?.releaseDate
+                )
             DiscoveryProduct(
-                identityKey = requiredId(match, "identityKey", 256),
+                identityKey = identityKey,
                 providerProductId = requiredString(match, "providerProductId", 160),
                 displayName = requiredText(match, "displayName", 512),
-                brand = optionalString(match, "brand", 160)
+                brand = optionalString(match, "brand", 160),
+                qualifiedOffers = offers
             )
         }
         val paginationRoot = requiredObject(resultRoot, "pagination")
@@ -797,7 +819,13 @@ object ArgentinaBackendContract {
         )
         val semantics = requiredObject(root, "evidenceSemantics")
         if (requiredString(semantics, "identity", 96) != "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS") invalid("unsupported discovery identity semantics")
-        if (requiredString(semantics, "prices", 32) != "NOT_INCLUDED" || requiredString(semantics, "offers", 32) != "NOT_INCLUDED" || requiredString(semantics, "stock", 32) != "NOT_INCLUDED") invalid("discovery response contains shopping evidence")
+        val prices = requiredString(semantics, "prices", 32)
+        val offers = requiredString(semantics, "offers", 32)
+        val stock = requiredString(semantics, "stock", 32)
+        if (stock != "NOT_INCLUDED") invalid("discovery response contains stock evidence")
+        val identityOnly = prices == "NOT_INCLUDED" && offers == "NOT_INCLUDED"
+        val scoped = prices == "QUALIFIED_CURRENT_RELEASE" && offers == "EXACT_IDENTITY_SCOPED_PREVIEW"
+        if (!identityOnly && !scoped) invalid("unsupported discovery shopping evidence")
         return DiscoveryResponse(version, requestId, releaseId, indexVersion, result)
     }
 

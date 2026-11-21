@@ -437,6 +437,11 @@ private object ArgentinaBackendJson {
             .apply {
                 request.cursor?.let { put("cursor", it) }
                 request.facetCursor?.let { put("facetCursor", it) }
+                if (request.latitude != null && request.longitude != null && request.radiusKm != null) {
+                    put("latitude", request.latitude)
+                    put("longitude", request.longitude)
+                    put("radiusKm", request.radiusKm)
+                }
             }
             .toString()
 

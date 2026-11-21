@@ -426,7 +426,10 @@ internal class ArgentinaLiveSearchCoordinator(
                         selections = selectionId?.let { listOf(it) }.orEmpty(),
                         pageSize = ArgentinaBackendContract.MAX_DISCOVERY_PAGE_SIZE,
                         cursor = if (facetCursor == null) synchronized(lock) { discoveryPageCursors[page] } else null,
-                        facetCursor = facetCursor
+                        facetCursor = facetCursor,
+                        latitude = context.latitude,
+                        longitude = context.longitude,
+                        radiusKm = context.radiusKm
                     )
                     when (val response = bridge.discoverySearch(request, cancellation)) {
                         is ArgentinaBackendBridgeResult.Failure -> response
@@ -547,11 +550,16 @@ internal class ArgentinaLiveSearchCoordinator(
                     brand = match.brand,
                     matchLabel = "provider identity match",
                     sourceLabel = "Argentina identity catalog",
-                    identityKey = match.identityKey
+                    identityKey = match.identityKey,
+                    qualifiedOffers = match.qualifiedOffers
                 )
             },
             evaluatedCandidateCount = result.total.sourceIdentityCount,
-            notice = "Argentina identity catalog only — no current prices, stock, availability or ranking is included.",
+            notice = if (result.matches.any { it.qualifiedOffers.isNotEmpty() }) {
+                "Current published prices are shown when the source supplies them. Stock and availability remain unknown."
+            } else {
+                "Argentina identity catalog only — no current prices, stock, availability or ranking is included."
+            },
             page = page,
             hasMore = result.pagination.hasMore,
             nextPage = if (result.pagination.hasMore) page + 1 else null,
