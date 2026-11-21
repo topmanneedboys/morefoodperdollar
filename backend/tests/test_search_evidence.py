@@ -377,6 +377,21 @@ class SearchEvidenceTests(unittest.TestCase):
 
         self.assertEqual(reader.args[0], "naranja")
 
+    def test_explicit_vodka_orange_does_not_expand_to_fruit(self) -> None:
+        reader = self._Reader()
+        service = BackendService("", release_manager=self._ReleaseManager())
+        service._reader = lambda _handle: reader
+
+        with patch.dict(os.environ, {}, clear=True):
+            service.search({
+                "latitude": "-34.60",
+                "longitude": "-58.38",
+                "radiusKm": "5",
+                "query": "vodka orange",
+            })
+
+        self.assertEqual(reader.args[0], "vodka")
+
     def test_categories_reads_the_taxonomy_sidecar_tree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "taxonomy.jsonl.gz"

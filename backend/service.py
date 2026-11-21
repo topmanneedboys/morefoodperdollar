@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 import uuid
 import threading
@@ -202,6 +203,36 @@ def _search_facets(candidates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "sizes": _entries(sizes),
         "priceRange": price_range,
     }
+
+
+def _family_conflict_terms(query: str, family: str) -> tuple[str, ...]:
+    """Form terms the query names that the matched family explicitly excludes.
+
+    A bare "orange" may safely expand to the Spanish catalogue term, but
+    "vodka orange" must not: vodka is a different product the shopper asked
+    for, and it is listed as an exclusion of the orange family.
+    """
+
+    try:
+        from tools.consumer_input_intelligence import default_vocabulary, normalize_text
+    except Exception:  # pragma: no cover - vocabulary is always present
+        return ()
+    data = default_vocabulary()
+    forms = data.get("productForms", {})
+    rule = forms.get(family) if isinstance(forms, Mapping) else None
+    if not isinstance(rule, Mapping):
+        return ()
+    excluded = [str(value) for value in rule.get("exclude", ()) or () if str(value).strip()]
+    normalized = f" {normalize_text(query, max_length=512)} "
+    return tuple(
+        value
+        for value in excluded
+        if f" {normalize_text(value, max_length=128)} " in normalized
+    )
+
+
+def _query_conflicts_with_family(query: str, family: str) -> bool:
+    return bool(_family_conflict_terms(query, family))
 
 
 def _rank_by_expected_department(
@@ -864,7 +895,8 @@ class BackendService:
         selected_family = family_query_key(query)
         selected_form = family_query_form(query)
         discovery_query = query
-        if selected_family in _FAMILY_DISCOVERY_QUERIES:
+        conflict_terms = _family_conflict_terms(query, selected_family) if selected_family else ()
+        if selected_family in _FAMILY_DISCOVERY_QUERIES and not conflict_terms:
             # Bilingual family labels and presentation choices are identity
             # refinements, not reliable lexical catalog phrases.  Search the
             # canonical Argentina family term first, then apply the observed
@@ -872,6 +904,11 @@ class BackendService:
             # cream`` or ``chewing gum`` on the same source-backed result
             # set as its Spanish equivalent.
             discovery_query = _FAMILY_DISCOVERY_QUERIES[selected_family]
+        elif conflict_terms:
+            # "vodka orange" explicitly names a spirit the orange family
+            # excludes.  Search the named product, then prefer the identities
+            # whose names also carry the family word.
+            discovery_query = conflict_terms[0]
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {
@@ -893,7 +930,7 @@ class BackendService:
         # larger bounded window before applying the direct-egg identity filter
         # so genuine food rows are not displaced by those higher-ranked noise
         # rows.  The cap remains the existing 31-product discovery limit.
-        if selected_family == "egg" or selected_form is not None:
+        if selected_family == "egg" or selected_form is not None or conflict_terms:
             window_limit = MAX_DISCOVERY_PRODUCT_LIMIT
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):
@@ -947,6 +984,26 @@ class BackendService:
             before = len(candidates)
             candidates = tuple(item for item in candidates if _is_classified(item))
             hidden_unclassified = before - len(candidates)
+        if conflict_terms:
+            conflict_words = {value.lower() for value in conflict_terms}
+            family_words = [
+                token
+                for token in re.findall(r"[a-záéíóúñü]+", query.lower())
+                if token not in conflict_words
+                and token not in {
+                    "de", "del", "la", "el", "los", "las", "y", "con", "sin",
+                    "para", "kg", "kgs", "g", "gr", "grs", "l", "lt", "ml",
+                    "cc", "un", "u", "x",
+                }
+            ]
+            if family_words:
+                preferred = tuple(
+                    item
+                    for item in candidates
+                    if any(word in str(item.get("name") or "").lower() for word in family_words)
+                )
+                remaining = tuple(item for item in candidates if item not in preferred)
+                candidates = preferred + remaining
         if brand is not None:
             target_brand = brand.strip().casefold()
             candidates = tuple(
