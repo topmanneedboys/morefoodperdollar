@@ -17,6 +17,9 @@ from tools.shopping_intelligence_engine import ExactMoney, ExactQuantity, Shoppi
 
 SORTS = frozenset({"name", "pack", "unit", "distance"})
 BASES = frozenset({"100 g", "100 ml", "1 count"})
+# Bounded exact-offer join for broad queries; the leading identities carry the
+# visible page while the remainder stays identity-only.
+MAX_SCOPED_OFFER_IDENTITIES = 48
 
 
 def _amount(offer: Mapping[str, Any], sort: str) -> Fraction | None:
@@ -85,10 +88,23 @@ def scoped_search(index, reader, handle, payload: Mapping[str, Any], selections)
                 raise ValueError("cursor mismatch")
         except (KeyError, TypeError, ValueError) as exc:
             raise BackendQueryError("cursor does not match this scoped query") from exc
-    offers, metrics = reader.offers_for_identities(
-        tuple(keys), selections=selections, latitude=Decimal(payload["latitude"]),
-        longitude=Decimal(payload["longitude"]), radius_km=Decimal(payload["radiusKm"]),
-    )
+    # Joining offers for a broad query (for example "orange" with hundreds of
+    # identities) can exceed the bounded exact-offer plan limit.  Try the exact
+    # global join first (cheapest-anywhere sorting); if the safety bound trips,
+    # retry with the leading identities so the visible page still gets prices.
+    try:
+        offers, metrics = reader.offers_for_identities(
+            tuple(keys), selections=selections, latitude=Decimal(payload["latitude"]),
+            longitude=Decimal(payload["longitude"]), radius_km=Decimal(payload["radiusKm"]),
+        )
+    except BackendQueryError as exc:
+        if "DISCOVERY_SCOPE_TOO_LARGE" not in str(exc):
+            raise
+        offers, metrics = reader.offers_for_identities(
+            tuple(keys)[:MAX_SCOPED_OFFER_IDENTITIES], selections=selections,
+            latitude=Decimal(payload["latitude"]), longitude=Decimal(payload["longitude"]),
+            radius_km=Decimal(payload["radiusKm"]),
+        )
     # Store choices cover the complete eligible offer set, not the visible page.
     stores = {}
     for bucket in offers.values():
